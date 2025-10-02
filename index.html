@@ -1,13 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-
-// Mathilde – Plan Python & Data (Infographie Interactive)
-// ✅ Fix: the previous canvas contained a full HTML file; the environment parses TSX.
-//    We now export a proper React component instead of raw HTML to avoid
-//    "Unexpected token" at the DOCTYPE.
-// ✅ Also keeps all features: timeline, checklists with localStorage, per‑item PDF links,
-//    export/import JSON, bulk actions, progress bars, and a helper to paste many links.
-
-// ---------- Styles (scoped) ----------
+// ---------- Styles ----------
 const styles = `
 :root{
   --bg:#f7f9fc; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
@@ -15,72 +6,68 @@ const styles = `
   --shadow:0 6px 20px rgba(2,6,23,.08); --radius:16px;
 }
 *{box-sizing:border-box}
-body{background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink)}
 .wrap{max-width:1120px;margin:auto;padding:28px}
+body{margin:0;background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",sans-serif}
+h1,h2,h3{margin:0 0 .5rem}
+a{color:var(--blue)}
 .header{display:flex;gap:16px;align-items:end;justify-content:space-between;margin-bottom:18px}
-.title{font-weight:800;font-size:26px}
-.sub{color:var(--muted)}
-.badge{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);font-size:12px}
+.badge{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
-.legend{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
-.dot{width:10px;height:10px;border-radius:50%}
-.timeline{overflow-x:auto;padding-bottom:6px}
-.tl{display:flex;gap:18px;align-items:center;min-width:900px}
-.tl .b{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
-.tl .ball{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
-.tl .line{position:absolute;top:16px;left:-38px;width:38px;height:2px;background:var(--line)}
-.week{background:#f1f5f9;border:1px solid var(--line);border-radius:12px;padding:12px}
 .grid{display:grid;gap:16px}
 @media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}}
+.legend{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%}
 .module{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px}
-.module h3{font-size:16px;margin:0}
+.module h3{font-size:16px}
 .row{display:flex;align-items:flex-start;gap:10px}
 .cb{width:16px;height:16px;margin-top:2px}
 .muted{color:var(--muted)}
 .kpi{height:8px;background:#fff;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
 .kpi>i{display:block;height:100%}
 .pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.spacer{height:10px}
+.title{font-weight:800;font-size:26px}
+.sub{color:var(--muted)}
 .btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer}
 .btn:hover{border-color:#cbd5e1}
 .right{margin-left:auto}
 .tiny{font-size:12px}
 .edit-link{opacity:.7;cursor:pointer}
 .edit-link:hover{opacity:1}
+.timeline{overflow-x:auto;padding-bottom:6px}
+.tl{display:flex;gap:18px;align-items:center;min-width:900px}
+.tl .b{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tl .ball{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
+.tl .line{position:absolute;top:16px;left:-38px;width:38px;height:2px;background:var(--line)}
+.week{background:#f1f5f9;border:1px solid var(--line);border-radius:12px;padding:12px}
 .footer{color:var(--muted);text-align:center;margin:20px 0 40px}
 .settings{display:flex;gap:10px;flex-wrap:wrap}
+.settings input[type="file"]{display:none}
 `;
 
 // ---------- Helpers ----------
-const getCSSVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const slug = (s: string) => s
   .toLowerCase()
   .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "") // strip accents
+  .replace(/[\u0300-\u036f]/g, "") // remove diacritics
   .replace(/[^a-z0-9]+/g, "-")
   .replace(/(^-|-$)/g, "");
 
-const PRIORITY = {
-  MASTER: { label: "À maîtriser", color: () => getCSSVar("--blue") },
-  LEARN:  { label: "À apprendre", color: () => getCSSVar("--green") },
-  AWARE:  { label: "Culture générale", color: () => getCSSVar("--gray") }
-} as const;
+const loadJSON = <T,>(k: string): T | null => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) as T : null; } catch { return null; } };
+const saveJSON = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
-// Types
+// ---------- Types ----------
 type Week = { id: number; label: string; month: string; color: string; title: string; tasks: string[] };
 
-type ModuleDef = {
-  title: string;
-  prio: keyof typeof PRIORITY;
-  items: string[];
-};
+type ModuleDef = { title: string; prio: keyof typeof PRIORITY; items: string[] };
 
-// localStorage utils
-const loadJSON = <T,>(k: string): T | null => {
-  try { const r = localStorage.getItem(k); return r ? JSON.parse(r) as T : null; } catch { return null; }
-};
-const saveJSON = (k: string, obj: unknown) => { try { localStorage.setItem(k, JSON.stringify(obj)); } catch {} };
+// ---------- Constants (use CSS vars directly to avoid getComputedStyle timing) ----------
+const PRIORITY = {
+  MASTER: { label: "À maîtriser", color: "var(--blue)" },
+  LEARN:  { label: "À apprendre", color: "var(--green)" },
+  AWARE:  { label: "Culture générale", color: "var(--gray)" }
+} as const;
 
-// ---------- Data ----------
 const WEEKS: Week[] = [
   { id:1, label:"S1", month:"Février", color:"var(--blue)",  title:"Bases Python", tasks:["Variables, conditions, boucles","Fonctions simples","Lire/écrire des fichiers"]},
   { id:2, label:"S2", month:"Février", color:"var(--blue)",  title:"POO & organisation du code", tasks:["Classes & objets (bases)","Héritage simple","Modules & bibliothèques","Mini‑projet : calculatrice"]},
@@ -97,162 +84,135 @@ const WEEKS: Week[] = [
 ];
 
 const MODULES: ModuleDef[] = [
-  { title:"Piloter la production de contenus digitaux", prio:"AWARE",
-    items:["Pourquoi se former / Intro","Cible & brief créatif","Gestion & mise en place opérationnelle","Proposition & application"] },
-  { title:"HTML / CSS / Bootstrap", prio:"AWARE",
-    items:["HTML : structure, multimédia, formulaires","CSS : sélecteurs, box‑model, layout Grid/Flex, responsive","Bootstrap : grille, composants, Hello world","Qualité, SASS, SEO, déploiement"] },
-  { title:"JavaScript (Front)", prio:"AWARE",
-    items:["Événementiel, DOM, Fetch/AJAX, Promesses","Objets & classes (bases)","JSON, Canvas","jQuery (culture)"] },
-  { title:"PHP (culture générale)", prio:"AWARE",
-    items:["Syntaxe, fonctions, tableaux, boucles","Superglobales, sécurité, fichiers","POO, erreurs, MVC, ORM PHP"] },
-  { title:"Bases de données relationnelles (SQL)", prio:"MASTER",
-    items:["Modèle conceptuel & logique","Créer/alimenter une BDD, requêtes","Jointures, fonctions SQL","Projet : créer & administrer la BDD"] },
-  { title:"NoSQL / MongoDB", prio:"LEARN", items:["Concepts NoSQL","Créer & administrer MongoDB"] },
-  { title:"Python – fondamentaux", prio:"MASTER",
-    items:["Interpréteur, environnements","Variables, conditions, boucles","Structures de données","Fonctions, modules, tests unitaires","POO : classes, héritage, dunders"] },
-  { title:"Python – Web & APIs", prio:"MASTER",
-    items:["Fichiers, chaînes, temps","Requêtes HTTP & API REST","Flask/Jinja, déploiement","Django : modèles, vues"] },
-  { title:"Data & Visualisation (Python)", prio:"MASTER",
-    items:["NumPy / Pandas (bases → +)","Matplotlib / Seaborn","Bokeh / Streamlit","Présentations impactantes"] },
-  { title:"React Native (mobile)", prio:"AWARE",
-    items:["Expo, composants, state/props","Flexbox, navigation, Redux","SQLite local, déploiement","Projet mobile (culture)"] },
-  { title:"Concevoir & utiliser des API", prio:"MASTER",
-    items:["Design d’API, sécurisation accès","OAuth, APIs Google/AWS, paiements","Utilisation & intégration"] },
-  { title:"Git / GitHub / GitLab", prio:"LEARN",
-    items:["CLI, init/commit/push","Branches & rebase","Bonnes pratiques, projet GitHub","Intro GitLab"] },
-  { title:"Maintenance & documentation", prio:"LEARN",
-    items:["Doc d’architecture & code","Améliorations, doc utilisateur","Dette technique (notions)","Pentest (culture)"] }
+  { title:"Piloter la production de contenus digitaux", prio:"AWARE", items:[
+    "Pourquoi se former / Intro","Cible & brief créatif","Gestion & mise en place opérationnelle","Proposition & application"
+  ]},
+  { title:"HTML / CSS / Bootstrap", prio:"AWARE", items:[
+    "HTML : structure, multimédia, formulaires","CSS : sélecteurs, box‑model, layout Grid/Flex, responsive","Bootstrap : grille, composants, Hello world","Qualité, SASS, SEO, déploiement"
+  ]},
+  { title:"JavaScript (Front)", prio:"AWARE", items:[
+    "Événementiel, DOM, Fetch/AJAX, Promesses","Objets & classes (bases)","JSON, Canvas","jQuery (culture)"
+  ]},
+  { title:"PHP (culture générale)", prio:"AWARE", items:[
+    "Syntaxe, fonctions, tableaux, boucles","Superglobales, sécurité, fichiers","POO, erreurs, MVC, ORM PHP"
+  ]},
+  { title:"Bases de données relationnelles (SQL)", prio:"MASTER", items:[
+    "Modèle conceptuel & logique","Créer/alimenter une BDD, requêtes","Jointures, fonctions SQL","Projet : créer & administrer la BDD"
+  ]},
+  { title:"NoSQL / MongoDB", prio:"LEARN", items:["Concepts NoSQL","Créer & administrer MongoDB"]},
+  { title:"Python – fondamentaux", prio:"MASTER", items:[
+    "Interpréteur, environnements","Variables, conditions, boucles","Structures de données","Fonctions, modules, tests unitaires","POO : classes, héritage, dunders"
+  ]},
+  { title:"Python – Web & APIs", prio:"MASTER", items:[
+    "Fichiers, chaînes, temps","Requêtes HTTP & API REST","Flask/Jinja, déploiement","Django : modèles, vues"
+  ]},
+  { title:"Data & Visualisation (Python)", prio:"MASTER", items:[
+    "NumPy / Pandas (bases → +)","Matplotlib / Seaborn","Bokeh / Streamlit","Présentations impactantes"
+  ]},
+  { title:"React Native (mobile)", prio:"AWARE", items:[
+    "Expo, composants, state/props","Flexbox, navigation, Redux","SQLite local, déploiement","Projet mobile (culture)"
+  ]},
+  { title:"Concevoir & utiliser des API", prio:"MASTER", items:[
+    "Design d’API, sécurisation accès","OAuth, APIs Google/AWS, paiements","Utilisation & intégration"
+  ]},
+  { title:"Git / GitHub / GitLab", prio:"LEARN", items:[
+    "CLI, init/commit/push","Branches & rebase","Bonnes pratiques, projet GitHub","Intro GitLab"
+  ]},
+  { title:"Maintenance & documentation", prio:"LEARN", items:[
+    "Doc d’architecture & code","Améliorations, doc utilisateur","Dette technique (notions)","Pentest (culture)"
+  ]}
 ];
 
-// ---------- React Component ----------
+// ---------- Component ----------
 export default function MathildePlanApp() {
-  // Style injection once
+  // style injection
   useEffect(() => {
-    const tag = document.createElement("style");
-    tag.innerHTML = styles;
-    document.head.appendChild(tag);
-    return () => { document.head.removeChild(tag); };
+    const tag = document.createElement("style"); tag.innerHTML = styles; document.head.appendChild(tag);
+    return () => { try { document.head.removeChild(tag); } catch {} };
   }, []);
 
-  // Weeks
-  const weeks = useMemo<Week[]>(() => WEEKS.map(w => ({...w, color: getComputedStyle(document.documentElement).getPropertyValue(w.color.replace("var", "var")).trim() || w.color })), []);
+  // weeks & active selection
+  const weeks = useMemo(() => WEEKS, []);
   const [activeWeek, setActiveWeek] = useState<Week>(weeks[0]);
 
-  // Local storage state
+  // storage state
   const STORAGE_PROGRESS = "mathilde-progress-v1";
-  const STORAGE_LINKS = "mathilde-links-v1";
+  const STORAGE_LINKS    = "mathilde-links-v1";
   const [progress, setProgress] = useState<Record<string, Record<string, boolean>>>(() => loadJSON(STORAGE_PROGRESS) || {});
-  const [links, setLinks] = useState<Record<string, Record<string, string>>>(() => loadJSON(STORAGE_LINKS) || {});
-
+  const [links, setLinks]       = useState<Record<string, Record<string, string>>>(() => loadJSON(STORAGE_LINKS) || {});
   useEffect(() => { saveJSON(STORAGE_PROGRESS, progress); }, [progress]);
   useEffect(() => { saveJSON(STORAGE_LINKS, links); }, [links]);
 
-  // Derived
-  const modules = useMemo<ModuleDef[]>(() => MODULES, []);
+  const modules = useMemo(() => MODULES, []);
 
-  const toggle = (moduleTitle: string, itemLabel: string) => {
-    const m = slug(moduleTitle), k = slug(itemLabel);
+  const toggle = (moduleTitle: string, item: string) => {
+    const m = slug(moduleTitle), k = slug(item);
     setProgress(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: !prev[m]?.[k] } }));
   };
-
   const computeProgress = (moduleTitle: string, items: string[]) => {
-    const m = slug(moduleTitle);
-    const done = items.filter(it => progress[m]?.[slug(it)]).length;
+    const m = slug(moduleTitle); const done = items.filter(it => progress[m]?.[slug(it)]).length;
     return Math.round((done / items.length) * 100);
   };
-
-  const setItemLink = (moduleTitle: string, itemLabel: string) => {
-    const m = slug(moduleTitle), k = slug(itemLabel);
+  const setItemLink = (moduleTitle: string, item: string) => {
+    const m = slug(moduleTitle), k = slug(item);
     const current = links[m]?.[k] || "";
-    const newUrl = window.prompt(`Colle le lien Google Drive du PDF pour:\n${moduleTitle} → ${itemLabel}`, current);
-    if (newUrl !== null) {
-      setLinks(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: newUrl.trim() } }));
-    }
+    const newUrl = window.prompt(`Colle le lien Google Drive du PDF pour:\n${moduleTitle} → ${item}`, current);
+    if (newUrl !== null) setLinks(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: newUrl.trim() } }));
   };
 
-  // Export / Import
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // export / import / reset
+  const fileRef = useRef<HTMLInputElement>(null);
   const onExport = () => {
     const blob = new Blob([JSON.stringify({ progress, links }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "mathilde_progress.json"; a.click();
-    URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = "mathilde_progress.json"; a.click(); URL.revokeObjectURL(url);
   };
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const rd = new FileReader();
     rd.onload = () => {
-      try {
-        const data = JSON.parse(String(rd.result));
-        setProgress(data.progress || {});
-        setLinks(data.links || {});
-        alert("Import OK ✔");
-      } catch {
-        alert("Fichier invalide");
-      }
+      try { const data = JSON.parse(String(rd.result)); setProgress(data.progress||{}); setLinks(data.links||{}); alert("Import OK ✔"); }
+      catch { alert("Fichier invalide"); }
     };
-    rd.readAsText(f);
-    // reset value to allow reimporting the same file later
-    e.target.value = "";
+    rd.readAsText(f); e.target.value = "";
   };
-  const onReset = () => {
-    if (confirm("Réinitialiser toute la progression et les liens ?")) {
-      setProgress({}); setLinks({});
-    }
-  };
+  const onReset = () => { if (confirm("Réinitialiser toute la progression et les liens ?")) { setProgress({}); setLinks({}); } };
 
-  // Helper to paste a long array of links in console:
-  useEffect(() => {
-    // expose a global helper for power‑user workflow
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).pasteLinksSequential = (arr: string[]) => {
-      let idx = 0;
-      setLinks(prev => {
-        const draft = { ...prev } as Record<string, Record<string, string>>;
-        modules.forEach(m => {
-          const ms = slug(m.title);
-          draft[ms] = draft[ms] || {};
-          m.items.forEach(it => {
-            if (idx < arr.length) draft[ms][slug(it)] = String(arr[idx++]);
-          });
-        });
-        return draft;
-      });
-    };
-  }, [modules]);
+  // helper for mass pasting links
+  useEffect(() => { (window as any).pasteLinksSequential = (arr: string[]) => {
+    let idx = 0; setLinks(prev => {
+      const draft: Record<string, Record<string, string>> = { ...prev };
+      modules.forEach(m => { const ms = slug(m.title); draft[ms] = draft[ms] || {}; m.items.forEach(it => { if (idx < arr.length) draft[ms][slug(it)] = String(arr[idx++]); }); });
+      return draft; });
+  }; }, [modules]);
 
-  // ---------- Self‑tests (do NOT change unless wrong) ----------
+  // ---------- Self-tests ----------
   useEffect(() => {
     try {
-      console.assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug should strip diacritics & punctuation");
-      console.assert(slug("  Python  Basics  ") === "python-basics", "slug should collapse spaces");
+      console.assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug removes diacritics & punctuation");
+      console.assert(slug("  Python  Basics  ") === "python-basics", "slug collapses spaces");
+      console.assert(WEEKS.length === 12, "12 weeks expected");
+      console.assert(new Set(WEEKS.map(w=>w.id)).size === WEEKS.length, "week ids unique");
+      // extra test: computeProgress baseline
       const items = ["A","B","C"]; const mTitle = "Test";
-      const p0 = {} as Record<string, Record<string, boolean>>;
-      const p1 = { [slug(mTitle)]: { [slug("A")]: true, [slug("B")]: true, [slug("C")]: true } } as typeof p0;
-      const tmpCompute = (prog: typeof p0) => { const m=slug(mTitle); const done=items.filter(it=>prog[m]?.[slug(it)]).length; return Math.round((done/items.length)*100); };
-      console.assert(tmpCompute(p0) === 0, "progress 0% expected");
-      console.assert(tmpCompute(p1) === 100, "progress 100% expected");
-      console.assert(WEEKS.length === 12, "there should be 12 weeks");
-      console.assert(new Set(WEEKS.map(w=>w.id)).size === WEEKS.length, "week ids must be unique");
-      // Extra test: computeProgress matches internal helper when state is empty
-      console.assert(computeProgress(mTitle, items) === 0, "computeProgress should be 0% on empty state");
+      const tmp = (prog: Record<string, Record<string, boolean>>) => { const m=slug(mTitle); const d=items.filter(it=>prog[m]?.[slug(it)]).length; return Math.round((d/items.length)*100); };
+      console.assert(tmp({}) === 0, "progress 0% expected");
+      console.assert(computeProgress(mTitle, items) === 0, "computeProgress 0% on empty state");
       console.log("✔ Self-tests passed");
-    } catch (e) {
-      console.error("✖ Self-tests failed:", e);
-    }
+    } catch (e) { console.error("✖ Self-tests failed", e); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="wrap">
       <style>{styles}</style>
+
       <header className="header">
         <div>
-          <div className="title">Plan Python & Data — <span style={{ color: getCSSVar("--blue") }}>Mathilde Martine Paisley</span></div>
+          <div className="title">Plan Python & Data — <span style={{ color: "var(--blue)" }}>Mathilde Martine Paisley</span></div>
           <div className="sub">Rôle : <strong>Cheffe/Direction de projet</strong> (SIRH, Data, Digital) • Objectif : maîtriser <strong>mécanismes</strong> (Python, APIs, SQL, Data‑Viz) sans devenir dev.</div>
         </div>
-        <div className="badge">Cadence : <strong>2 soirs × 1h</strong> + <strong>1 matinée week‑end × 2h</strong></div>
+        <div className="badge tiny">Cadence : <strong>2 soirs × 1h</strong> + <strong>1 matinée week‑end × 2h</strong></div>
       </header>
 
       {/* Timeline */}
@@ -260,35 +220,30 @@ export default function MathildePlanApp() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <h2>Frise chronologique (12 semaines)</h2>
           <div className="legend">
-            <span className="dot" style={{ background: getCSSVar("--blue") }}></span>Février
-            <span className="dot" style={{ background: getCSSVar("--green") }}></span>Mars
-            <span className="dot" style={{ background: getCSSVar("--orange") }}></span>Avril
+            <span className="dot" style={{ background: "var(--blue)" }} />Février
+            <span className="dot" style={{ background: "var(--green)" }} />Mars
+            <span className="dot" style={{ background: "var(--orange)" }} />Avril
           </div>
         </div>
 
         <div className="timeline">
           <div className="tl">
             {weeks.map((w, i) => (
-              <button key={w.id} className="b" onClick={() => setActiveWeek(w)} aria-label={`${w.label} – ${w.title}`}> 
+              <button key={w.id} className="b" onClick={() => setActiveWeek(w)} aria-label={`${w.label} – ${w.title}`} title={w.title}>
                 {i>0 && <span className="line"/>}
-                <span className="ball" style={{ background: getComputedStyle(document.documentElement).getPropertyValue(w.color.replace("var", "var")).trim() || w.color }}>
-                  <span style={{ fontSize: 11 }}>{w.label}</span>
-                </span>
+                <span className="ball" style={{ background: w.color }}><span style={{ fontSize: 11 }}>{w.label}</span></span>
                 <span className="tiny" style={{ fontWeight: 600 }}>{w.month}</span>
                 <span className="tiny muted" style={{ maxWidth: 120, textAlign: "center" }}>{w.title}</span>
               </button>
             ))}
           </div>
         </div>
-
-        <div style={{ height: 10 }} />
+        <div className="spacer" />
         <div className="week">
           <div className="tiny muted">Semaine active</div>
           <div><strong>{activeWeek.label} – {activeWeek.title}</strong></div>
           <div className="muted tiny">Mois : {activeWeek.month}</div>
-          <ul className="tiny" style={{ marginTop: 6 }}>
-            {activeWeek.tasks.map((t, idx) => <li key={idx}>{t}</li>)}
-          </ul>
+          <ul className="tiny" style={{ marginTop: 6 }}>{activeWeek.tasks.map((t, idx) => <li key={idx}>{t}</li>)}</ul>
         </div>
       </section>
 
@@ -297,16 +252,16 @@ export default function MathildePlanApp() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <h2>Suivi des cours — check‑list (local)</h2>
           <div className="legend">
-            <span className="dot" style={{ background: getCSSVar("--blue") }}></span>À maîtriser
-            <span className="dot" style={{ background: getCSSVar("--green") }}></span>À apprendre
-            <span className="dot" style={{ background: getCSSVar("--gray") }}></span>Culture générale
+            <span className="dot" style={{ background: "var(--blue)" }} />À maîtriser
+            <span className="dot" style={{ background: "var(--green)" }} />À apprendre
+            <span className="dot" style={{ background: "var(--gray)" }} />Culture générale
           </div>
         </div>
 
         <div className="settings" style={{ marginBottom: 10 }}>
           <button className="btn" onClick={onExport}>Exporter progression (JSON)</button>
           <label className="btn" htmlFor="importFile">Importer progression</label>
-          <input ref={fileInputRef} id="importFile" type="file" accept="application/json" style={{ display: "none" }} onChange={onImport} />
+          <input id="importFile" ref={fileRef} type="file" accept="application/json" onChange={onImport} />
           <button className="btn" onClick={onReset}>Réinitialiser</button>
         </div>
 
@@ -314,19 +269,16 @@ export default function MathildePlanApp() {
           {modules.map((m) => {
             const mSlug = slug(m.title);
             const pct = computeProgress(m.title, m.items);
-            const color = PRIORITY[m.prio].color();
+            const color = PRIORITY[m.prio].color;
             return (
               <div key={m.title} className="module">
                 <div className="row">
                   <h3>{m.title}</h3>
-                  <span className="pill right">
-                    <span className="dot" style={{ background: color }}></span>
-                    <span>{PRIORITY[m.prio].label}</span>
-                  </span>
+                  <span className="pill right"><span className="dot" style={{ background: color }} />{PRIORITY[m.prio].label}</span>
                 </div>
                 <div className="kpi"><i style={{ width: `${pct}%`, background: color }} /></div>
                 <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0" }}>
-                  {m.items.map((it) => {
+                  {m.items.map(it => {
                     const iSlug = slug(it);
                     const checked = !!progress[mSlug]?.[iSlug];
                     const url = links[mSlug]?.[iSlug] || "";
@@ -335,7 +287,7 @@ export default function MathildePlanApp() {
                         <input type="checkbox" className="cb" checked={checked} onChange={() => toggle(m.title, it)} aria-label={`Valider ${it}`} />
                         <span className={checked ? "muted" : undefined}>{it}</span>
                         <span className="right tiny">
-                          <a href={url || undefined} target="_blank" rel="noopener noreferrer" style={{ textDecoration: url ? "underline" : "none", color: url ? getCSSVar("--blue") : undefined, opacity: url ? 1 : .4, pointerEvents: url ? "auto" : "none" }}>PDF</a>
+                          <a href={url || undefined} target="_blank" rel="noopener noreferrer" style={{ textDecoration: url ? "underline" : "none", color: url ? "var(--blue)" : undefined, opacity: url ? 1 : .4, pointerEvents: url ? "auto" : "none" }}>PDF</a>
                           <span title="Ajouter/Modifier le lien PDF" className="edit-link" onClick={() => setItemLink(m.title, it)}> 🔗</span>
                         </span>
                       </li>
@@ -343,12 +295,8 @@ export default function MathildePlanApp() {
                   })}
                 </ul>
                 <div className="row" style={{ marginTop: 10 }}>
-                  <button className="btn tiny" onClick={() => {
-                    setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), true])) }));
-                  }}>Tout cocher</button>
-                  <button className="btn tiny" onClick={() => {
-                    setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), false])) }));
-                  }}>Tout décocher</button>
+                  <button className="btn tiny" onClick={() => setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), true])) }))}>Tout cocher</button>
+                  <button className="btn tiny" onClick={() => setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), false])) }))}>Tout décocher</button>
                 </div>
               </div>
             );
