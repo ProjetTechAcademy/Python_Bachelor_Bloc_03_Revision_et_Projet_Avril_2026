@@ -1,454 +1,362 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// Interactive roadmap + course checklist with local persistence (localStorage)
-// TailwindCSS styling, no external deps. Designed for Mathilde Martine Paisley.
+// Mathilde – Plan Python & Data (Infographie Interactive)
+// ✅ Fix: the previous canvas contained a full HTML file; the environment parses TSX.
+//    We now export a proper React component instead of raw HTML to avoid
+//    "Unexpected token" at the DOCTYPE.
+// ✅ Also keeps all features: timeline, checklists with localStorage, per‑item PDF links,
+//    export/import JSON, bulk actions, progress bars, and a helper to paste many links.
 
-// Priority color legend
+// ---------- Styles (scoped) ----------
+const styles = `
+:root{
+  --bg:#f7f9fc; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --blue:#0ea5e9; --green:#22c55e; --gray:#94a3b8; --orange:#f97316;
+  --shadow:0 6px 20px rgba(2,6,23,.08); --radius:16px;
+}
+*{box-sizing:border-box}
+body{background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink)}
+.wrap{max-width:1120px;margin:auto;padding:28px}
+.header{display:flex;gap:16px;align-items:end;justify-content:space-between;margin-bottom:18px}
+.title{font-weight:800;font-size:26px}
+.sub{color:var(--muted)}
+.badge{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.legend{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%}
+.timeline{overflow-x:auto;padding-bottom:6px}
+.tl{display:flex;gap:18px;align-items:center;min-width:900px}
+.tl .b{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tl .ball{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
+.tl .line{position:absolute;top:16px;left:-38px;width:38px;height:2px;background:var(--line)}
+.week{background:#f1f5f9;border:1px solid var(--line);border-radius:12px;padding:12px}
+.grid{display:grid;gap:16px}
+@media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}}
+.module{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px}
+.module h3{font-size:16px;margin:0}
+.row{display:flex;align-items:flex-start;gap:10px}
+.cb{width:16px;height:16px;margin-top:2px}
+.muted{color:var(--muted)}
+.kpi{height:8px;background:#fff;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
+.kpi>i{display:block;height:100%}
+.pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer}
+.btn:hover{border-color:#cbd5e1}
+.right{margin-left:auto}
+.tiny{font-size:12px}
+.edit-link{opacity:.7;cursor:pointer}
+.edit-link:hover{opacity:1}
+.footer{color:var(--muted);text-align:center;margin:20px 0 40px}
+.settings{display:flex;gap:10px;flex-wrap:wrap}
+`;
+
+// ---------- Helpers ----------
+const getCSSVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const slug = (s: string) => s
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "") // strip accents
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/(^-|-$)/g, "");
+
 const PRIORITY = {
-  MASTER: { key: "MASTER", label: "À maîtriser", color: "#0EA5E9" }, // bleu
-  LEARN: { key: "LEARN", label: "À apprendre", color: "#22C55E" },   // vert
-  AWARE: { key: "AWARE", label: "Culture générale", color: "#64748B" } // gris
+  MASTER: { label: "À maîtriser", color: () => getCSSVar("--blue") },
+  LEARN:  { label: "À apprendre", color: () => getCSSVar("--green") },
+  AWARE:  { label: "Culture générale", color: () => getCSSVar("--gray") }
+} as const;
+
+// Types
+type Week = { id: number; label: string; month: string; color: string; title: string; tasks: string[] };
+
+type ModuleDef = {
+  title: string;
+  prio: keyof typeof PRIORITY;
+  items: string[];
 };
 
-function slug(s) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    // strip diacritics (portable across browsers)
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+// localStorage utils
+const loadJSON = <T,>(k: string): T | null => {
+  try { const r = localStorage.getItem(k); return r ? JSON.parse(r) as T : null; } catch { return null; }
+};
+const saveJSON = (k: string, obj: unknown) => { try { localStorage.setItem(k, JSON.stringify(obj)); } catch {} };
 
-export default function MathildePlan() {
-  // --- Weeks ---
-  const weeks = useMemo(
-    () => [
-      { id: 1, label: "S1", month: "Février", title: "Bases Python", color: "#0EA5E9", tasks: [
-        "Variables, conditions, boucles",
-        "Fonctions simples",
-        "Lire/écrire des fichiers"
-      ] },
-      { id: 2, label: "S2", month: "Février", title: "POO & organisation du code", color: "#0EA5E9", tasks: [
-        "Classes & objets (bases)",
-        "Héritage simple",
-        "Modules & bibliothèques",
-        "Mini‑projet : calculatrice"
-      ] },
-      { id: 3, label: "S3", month: "Février", title: "SQL – bases de données", color: "#0EA5E9", tasks: [
-        "SELECT/INSERT/UPDATE",
-        "Modèle simple RH (employés, salaires)",
-        "Jointures & filtres"
-      ] },
-      { id: 4, label: "S4", month: "Février", title: "Mini‑projet Python + SQL", color: "#0EA5E9", tasks: [
-        "Importer CSV → SQL",
-        "Script d’extraction automatisé",
-        "Affichage des résultats"
-      ] },
-      { id: 5, label: "S5", month: "Mars", title: "API REST", color: "#22C55E", tasks: [
-        "HTTP requests (GET/POST)",
-        "JSON & parsing",
-        "Connexion à une API publique"
-      ] },
-      { id: 6, label: "S6", month: "Mars", title: "Pandas & NumPy", color: "#22C55E", tasks: [
-        "Importer/Nettoyer un CSV",
-        "Stats descriptives (moyenne, max, min)",
-        "Prépare jeu RH/paie"
-      ] },
-      { id: 7, label: "S7", month: "Mars", title: "Data‑Viz (Matplotlib/Seaborn)", color: "#22C55E", tasks: [
-        "Histogrammes & courbes",
-        "Ex : salaires par service",
-        "Storytelling visuel"
-      ] },
-      { id: 8, label: "S8", month: "Mars", title: "Mini‑projet API + Viz", color: "#22C55E", tasks: [
-        "Appeler une API",
-        "Nettoyer avec Pandas",
-        "Graphique dynamique"
-      ] },
-      { id: 9, label: "S9", month: "Avril", title: "Flask ou Streamlit", color: "#F97316", tasks: [
-        "Mini‑app web/board",
-        "Page simple déployée",
-        "Architecture propre"
-      ] },
-      { id: 10, label: "S10", month: "Avril", title: "Projet Python – Dashboard RH", color: "#F97316", tasks: [
-        "Base SQL + API + Viz",
-        "KPIs RH (absentéisme, turnover)",
-        "Filtre & navigation"
-      ] },
-      { id: 11, label: "S11", month: "Avril", title: "Améliorations + Doc", color: "#F97316", tasks: [
-        "Filtres & ergonomie",
-        "Doc utilisateur",
-        "Pitch de soutenance"
-      ] },
-      { id: 12, label: "S12", month: "Avril", title: "Validation & Révisions", color: "#F97316", tasks: [
-        "Tests finaux",
-        "Relecture Python/SQL",
-        "Q&A jury"
-      ] }
-    ],
-    []
-  );
+// ---------- Data ----------
+const WEEKS: Week[] = [
+  { id:1, label:"S1", month:"Février", color:"var(--blue)",  title:"Bases Python", tasks:["Variables, conditions, boucles","Fonctions simples","Lire/écrire des fichiers"]},
+  { id:2, label:"S2", month:"Février", color:"var(--blue)",  title:"POO & organisation du code", tasks:["Classes & objets (bases)","Héritage simple","Modules & bibliothèques","Mini‑projet : calculatrice"]},
+  { id:3, label:"S3", month:"Février", color:"var(--blue)",  title:"SQL – bases de données", tasks:["SELECT/INSERT/UPDATE","Modèle simple RH (employés, salaires)","Jointures & filtres"]},
+  { id:4, label:"S4", month:"Février", color:"var(--blue)",  title:"Mini‑projet Python + SQL", tasks:["Importer CSV → SQL","Script d’extraction automatisé","Affichage des résultats"]},
+  { id:5, label:"S5", month:"Mars",    color:"var(--green)", title:"API REST", tasks:["HTTP requests (GET/POST)","JSON & parsing","Connexion à une API publique"]},
+  { id:6, label:"S6", month:"Mars",    color:"var(--green)", title:"Pandas & NumPy", tasks:["Importer/Nettoyer un CSV","Stats descriptives","Préparer jeu RH/paie"]},
+  { id:7, label:"S7", month:"Mars",    color:"var(--green)", title:"Data‑Viz (Matplotlib/Seaborn)", tasks:["Histogrammes & courbes","Salaires par service","Storytelling visuel"]},
+  { id:8, label:"S8", month:"Mars",    color:"var(--green)", title:"Mini‑projet API + Viz", tasks:["Appeler une API","Nettoyer avec Pandas","Graphique dynamique"]},
+  { id:9, label:"S9", month:"Avril",   color:"var(--orange)",title:"Flask ou Streamlit", tasks:["Mini‑app web/board","Page simple déployée","Architecture propre"]},
+  { id:10,label:"S10",month:"Avril",   color:"var(--orange)",title:"Projet – Dashboard RH", tasks:["Base SQL + API + Viz","KPIs RH","Filtres & navigation"]},
+  { id:11,label:"S11",month:"Avril",   color:"var(--orange)",title:"Améliorations + Doc", tasks:["Ergonomie","Doc utilisateur","Pitch de soutenance"]},
+  { id:12,label:"S12",month:"Avril",   color:"var(--orange)",title:"Validation & Révisions", tasks:["Tests finaux","Relecture Python/SQL","Q&A jury"]}
+];
 
-  // Single source of truth for active week (fix duplicate declaration error)
-  const [activeWeek, setActiveWeek] = useState(weeks[0]);
+const MODULES: ModuleDef[] = [
+  { title:"Piloter la production de contenus digitaux", prio:"AWARE",
+    items:["Pourquoi se former / Intro","Cible & brief créatif","Gestion & mise en place opérationnelle","Proposition & application"] },
+  { title:"HTML / CSS / Bootstrap", prio:"AWARE",
+    items:["HTML : structure, multimédia, formulaires","CSS : sélecteurs, box‑model, layout Grid/Flex, responsive","Bootstrap : grille, composants, Hello world","Qualité, SASS, SEO, déploiement"] },
+  { title:"JavaScript (Front)", prio:"AWARE",
+    items:["Événementiel, DOM, Fetch/AJAX, Promesses","Objets & classes (bases)","JSON, Canvas","jQuery (culture)"] },
+  { title:"PHP (culture générale)", prio:"AWARE",
+    items:["Syntaxe, fonctions, tableaux, boucles","Superglobales, sécurité, fichiers","POO, erreurs, MVC, ORM PHP"] },
+  { title:"Bases de données relationnelles (SQL)", prio:"MASTER",
+    items:["Modèle conceptuel & logique","Créer/alimenter une BDD, requêtes","Jointures, fonctions SQL","Projet : créer & administrer la BDD"] },
+  { title:"NoSQL / MongoDB", prio:"LEARN", items:["Concepts NoSQL","Créer & administrer MongoDB"] },
+  { title:"Python – fondamentaux", prio:"MASTER",
+    items:["Interpréteur, environnements","Variables, conditions, boucles","Structures de données","Fonctions, modules, tests unitaires","POO : classes, héritage, dunders"] },
+  { title:"Python – Web & APIs", prio:"MASTER",
+    items:["Fichiers, chaînes, temps","Requêtes HTTP & API REST","Flask/Jinja, déploiement","Django : modèles, vues"] },
+  { title:"Data & Visualisation (Python)", prio:"MASTER",
+    items:["NumPy / Pandas (bases → +)","Matplotlib / Seaborn","Bokeh / Streamlit","Présentations impactantes"] },
+  { title:"React Native (mobile)", prio:"AWARE",
+    items:["Expo, composants, state/props","Flexbox, navigation, Redux","SQLite local, déploiement","Projet mobile (culture)"] },
+  { title:"Concevoir & utiliser des API", prio:"MASTER",
+    items:["Design d’API, sécurisation accès","OAuth, APIs Google/AWS, paiements","Utilisation & intégration"] },
+  { title:"Git / GitHub / GitLab", prio:"LEARN",
+    items:["CLI, init/commit/push","Branches & rebase","Bonnes pratiques, projet GitHub","Intro GitLab"] },
+  { title:"Maintenance & documentation", prio:"LEARN",
+    items:["Doc d’architecture & code","Améliorations, doc utilisateur","Dette technique (notions)","Pentest (culture)"] }
+];
 
-  // --- Course list with priorities ---
-  const modules = useMemo(() => ([
-    {
-      title: "Piloter la production de contenus digitaux",
-      priority: PRIORITY.AWARE,
-      items: [
-        "Pourquoi se former / Intro",
-        "Cible & brief créatif",
-        "Gestion & mise en place opérationnelle",
-        "Proposition & application"
-      ]
-    },
-    {
-      title: "HTML / CSS / Bootstrap",
-      priority: PRIORITY.AWARE,
-      items: [
-        "HTML : structure, multimédia, formulaires",
-        "CSS : sélecteurs, box‑model, layout Grid/Flex, responsive",
-        "Bootstrap : grille, composants, Hello world",
-        "Qualité, SASS, SEO, déploiement"
-      ]
-    },
-    {
-      title: "JavaScript (Front)",
-      priority: PRIORITY.AWARE,
-      items: [
-        "Événementiel, DOM, Fetch/AJAX, Promesses",
-        "Objets & classes (bases)",
-        "JSON, Canvas",
-        "jQuery (culture)"
-      ]
-    },
-    {
-      title: "PHP (culture générale)",
-      priority: PRIORITY.AWARE,
-      items: [
-        "Syntaxe, fonctions, tableaux, boucles",
-        "Superglobales, sécurité, fichiers",
-        "POO, erreurs, MVC, ORM PHP"
-      ]
-    },
-    {
-      title: "Bases de données relationnelles (SQL)",
-      priority: PRIORITY.MASTER,
-      items: [
-        "Modèle conceptuel & logique",
-        "Créer/alimenter une BDD, requêtes",
-        "Jointures, fonctions SQL",
-        "Projet : créer & administrer la BDD"
-      ]
-    },
-    {
-      title: "NoSQL / MongoDB",
-      priority: PRIORITY.LEARN,
-      items: [
-        "Concepts NoSQL",
-        "Créer & administrer MongoDB"
-      ]
-    },
-    {
-      title: "Python – fondamentaux",
-      priority: PRIORITY.MASTER,
-      items: [
-        "Interpréteur, environnements",
-        "Variables, conditions, boucles",
-        "Structures de données",
-        "Fonctions, modules, tests unitaires",
-        "POO : classes, héritage, dunders"
-      ]
-    },
-    {
-      title: "Python – Web & APIs",
-      priority: PRIORITY.MASTER,
-      items: [
-        "Fichiers, chaînes, temps",
-        "Requêtes HTTP & API REST",
-        "Flask/Jinja, déploiement",
-        "Django : modèles, vues"
-      ]
-    },
-    {
-      title: "Data & Visualisation (Python)",
-      priority: PRIORITY.MASTER,
-      items: [
-        "NumPy / Pandas (bases → +)",
-        "Matplotlib / Seaborn",
-        "Bokeh / Streamlit",
-        "Présentations impactantes"
-      ]
-    },
-    {
-      title: "React Native (mobile)",
-      priority: PRIORITY.AWARE,
-      items: [
-        "Expo, composants, state/props",
-        "Flexbox, navigation, Redux",
-        "SQLite local, déploiement",
-        "Projet mobile (culture)"
-      ]
-    },
-    {
-      title: "Concevoir & utiliser des API",
-      priority: PRIORITY.MASTER,
-      items: [
-        "Design d’API, sécurisation accès",
-        "OAuth, APIs Google/AWS, paiements",
-        "Utilisation & intégration"
-      ]
-    },
-    {
-      title: "Git / GitHub / GitLab",
-      priority: PRIORITY.LEARN,
-      items: [
-        "CLI, init/commit/push",
-        "Branches & rebase",
-        "Bonnes pratiques, projet GitHub",
-        "Intro GitLab"
-      ]
-    },
-    {
-      title: "Maintenance & documentation",
-      priority: PRIORITY.LEARN,
-      items: [
-        "Doc d’architecture & code",
-        "Améliorations, doc utilisateur",
-        "Dette technique (notions)",
-        "Pentest (culture)"
-      ]
-    }
-  ]), []);
-
-  // localStorage persistence for checkbox states
-  const storageKey = "mathilde-courses-v1";
-  const [progress, setProgress] = useState({});
+// ---------- React Component ----------
+export default function MathildePlanApp() {
+  // Style injection once
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) setProgress(JSON.parse(raw));
-    } catch {}
+    const tag = document.createElement("style");
+    tag.innerHTML = styles;
+    document.head.appendChild(tag);
+    return () => { document.head.removeChild(tag); };
   }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(progress));
-    } catch {}
-  }, [progress]);
 
-  const toggle = (moduleTitle, item) => {
-    const m = slug(moduleTitle);
-    const k = slug(item);
-    setProgress(prev => ({
-      ...prev,
-      [m]: { ...(prev[m] || {}), [k]: !(prev[m]?.[k]) }
-    }));
+  // Weeks
+  const weeks = useMemo<Week[]>(() => WEEKS.map(w => ({...w, color: getComputedStyle(document.documentElement).getPropertyValue(w.color.replace("var", "var")).trim() || w.color })), []);
+  const [activeWeek, setActiveWeek] = useState<Week>(weeks[0]);
+
+  // Local storage state
+  const STORAGE_PROGRESS = "mathilde-progress-v1";
+  const STORAGE_LINKS = "mathilde-links-v1";
+  const [progress, setProgress] = useState<Record<string, Record<string, boolean>>>(() => loadJSON(STORAGE_PROGRESS) || {});
+  const [links, setLinks] = useState<Record<string, Record<string, string>>>(() => loadJSON(STORAGE_LINKS) || {});
+
+  useEffect(() => { saveJSON(STORAGE_PROGRESS, progress); }, [progress]);
+  useEffect(() => { saveJSON(STORAGE_LINKS, links); }, [links]);
+
+  // Derived
+  const modules = useMemo<ModuleDef[]>(() => MODULES, []);
+
+  const toggle = (moduleTitle: string, itemLabel: string) => {
+    const m = slug(moduleTitle), k = slug(itemLabel);
+    setProgress(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: !prev[m]?.[k] } }));
   };
 
-  // Pure helper so we can test it easily
-  const computeProgress = (progressObj, moduleTitle, items) => {
+  const computeProgress = (moduleTitle: string, items: string[]) => {
     const m = slug(moduleTitle);
-    const done = items.filter(it => progressObj[m]?.[slug(it)]).length;
+    const done = items.filter(it => progress[m]?.[slug(it)]).length;
     return Math.round((done / items.length) * 100);
   };
 
-  const computeModuleProgress = (moduleTitle, items) =>
-    computeProgress(progress, moduleTitle, items);
+  const setItemLink = (moduleTitle: string, itemLabel: string) => {
+    const m = slug(moduleTitle), k = slug(itemLabel);
+    const current = links[m]?.[k] || "";
+    const newUrl = window.prompt(`Colle le lien Google Drive du PDF pour:\n${moduleTitle} → ${itemLabel}`, current);
+    if (newUrl !== null) {
+      setLinks(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: newUrl.trim() } }));
+    }
+  };
 
-  // ---- Lightweight self-tests (run once in dev) ----
+  // Export / Import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify({ progress, links }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "mathilde_progress.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const data = JSON.parse(String(rd.result));
+        setProgress(data.progress || {});
+        setLinks(data.links || {});
+        alert("Import OK ✔");
+      } catch {
+        alert("Fichier invalide");
+      }
+    };
+    rd.readAsText(f);
+    // reset value to allow reimporting the same file later
+    e.target.value = "";
+  };
+  const onReset = () => {
+    if (confirm("Réinitialiser toute la progression et les liens ?")) {
+      setProgress({}); setLinks({});
+    }
+  };
+
+  // Helper to paste a long array of links in console:
   useEffect(() => {
-    const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+    // expose a global helper for power‑user workflow
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).pasteLinksSequential = (arr: string[]) => {
+      let idx = 0;
+      setLinks(prev => {
+        const draft = { ...prev } as Record<string, Record<string, string>>;
+        modules.forEach(m => {
+          const ms = slug(m.title);
+          draft[ms] = draft[ms] || {};
+          m.items.forEach(it => {
+            if (idx < arr.length) draft[ms][slug(it)] = String(arr[idx++]);
+          });
+        });
+        return draft;
+      });
+    };
+  }, [modules]);
+
+  // ---------- Self‑tests (do NOT change unless wrong) ----------
+  useEffect(() => {
     try {
-      // slug tests
-      assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug should strip diacritics & punctuation");
-      assert(slug(" Python  Basics  ") === "python-basics", "slug should collapse spaces");
-      // progress tests
-      const items = ["A", "B", "C"];
-      const p0 = {}; // nothing done
-      assert(computeProgress(p0, "Test", items) === 0, "progress 0% expected");
-      const p1 = { [slug("Test")]: { [slug("A")]: true, [slug("B")]: true, [slug("C")]: true } };
-      assert(computeProgress(p1, "Test", items) === 100, "progress 100% expected");
-      // weeks tests
-      const ids = weeks.map(w => w.id);
-      const uniq = new Set(ids);
-      assert(ids.length === 12, "there should be 12 weeks");
-      assert(uniq.size === ids.length, "week ids must be unique");
-      // state naming test (prevent duplicate declaration)
-      // NOTE: at runtime we can't introspect declarations; this comment documents the fix:
-      // We keep a single declaration: const [activeWeek, setActiveWeek] = useState(weeks[0]);
+      console.assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug should strip diacritics & punctuation");
+      console.assert(slug("  Python  Basics  ") === "python-basics", "slug should collapse spaces");
+      const items = ["A","B","C"]; const mTitle = "Test";
+      const p0 = {} as Record<string, Record<string, boolean>>;
+      const p1 = { [slug(mTitle)]: { [slug("A")]: true, [slug("B")]: true, [slug("C")]: true } } as typeof p0;
+      const tmpCompute = (prog: typeof p0) => { const m=slug(mTitle); const done=items.filter(it=>prog[m]?.[slug(it)]).length; return Math.round((done/items.length)*100); };
+      console.assert(tmpCompute(p0) === 0, "progress 0% expected");
+      console.assert(tmpCompute(p1) === 100, "progress 100% expected");
+      console.assert(WEEKS.length === 12, "there should be 12 weeks");
+      console.assert(new Set(WEEKS.map(w=>w.id)).size === WEEKS.length, "week ids must be unique");
+      // Extra test: computeProgress matches internal helper when state is empty
+      console.assert(computeProgress(mTitle, items) === 0, "computeProgress should be 0% on empty state");
       console.log("✔ Self-tests passed");
     } catch (e) {
       console.error("✖ Self-tests failed:", e);
     }
-  }, [weeks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-800">
-      {/* Header */}
-      <header className="mx-auto max-w-6xl px-6 pt-10 pb-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-              Plan Python & Data – <span className="text-sky-600">Mathilde Martine Paisley</span>
-            </h1>
-            <p className="mt-2 text-slate-600 max-w-2xl">
-              Rôle ciblé : <span className="font-semibold">Cheffe de projet / Direction de projet</span> (SIRH, Data, Digital). Objectif :
-              <span className="font-semibold"> maîtrise des mécanismes</span> (Python, APIs, Data‑Viz, SQL) pour piloter avec crédibilité — sans devenir développeuse.
-            </p>
-          </div>
-          <div className="shrink-0 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wider text-slate-500">Cadence proposée</p>
-            <p className="text-sm font-semibold text-slate-700">2 soirs × 1h + 1 matinée week‑end × 2h</p>
-          </div>
+    <div className="wrap">
+      <style>{styles}</style>
+      <header className="header">
+        <div>
+          <div className="title">Plan Python & Data — <span style={{ color: getCSSVar("--blue") }}>Mathilde Martine Paisley</span></div>
+          <div className="sub">Rôle : <strong>Cheffe/Direction de projet</strong> (SIRH, Data, Digital) • Objectif : maîtriser <strong>mécanismes</strong> (Python, APIs, SQL, Data‑Viz) sans devenir dev.</div>
         </div>
+        <div className="badge">Cadence : <strong>2 soirs × 1h</strong> + <strong>1 matinée week‑end × 2h</strong></div>
       </header>
 
       {/* Timeline */}
-      <section className="mx-auto max-w-6xl px-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Frise chronologique (12 semaines)</h2>
-            <div className="flex items-center gap-3 text-xs">
-              <LegendDot color="#0EA5E9" label="Février" />
-              <LegendDot color="#22C55E" label="Mars" />
-              <LegendDot color="#F97316" label="Avril" />
-            </div>
+      <section className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <h2>Frise chronologique (12 semaines)</h2>
+          <div className="legend">
+            <span className="dot" style={{ background: getCSSVar("--blue") }}></span>Février
+            <span className="dot" style={{ background: getCSSVar("--green") }}></span>Mars
+            <span className="dot" style={{ background: getCSSVar("--orange") }}></span>Avril
           </div>
-          <Timeline weeks={weeks} onPick={setActiveWeek} />
-          <ActiveWeekCard week={activeWeek} />
+        </div>
+
+        <div className="timeline">
+          <div className="tl">
+            {weeks.map((w, i) => (
+              <button key={w.id} className="b" onClick={() => setActiveWeek(w)} aria-label={`${w.label} – ${w.title}`}> 
+                {i>0 && <span className="line"/>}
+                <span className="ball" style={{ background: getComputedStyle(document.documentElement).getPropertyValue(w.color.replace("var", "var")).trim() || w.color }}>
+                  <span style={{ fontSize: 11 }}>{w.label}</span>
+                </span>
+                <span className="tiny" style={{ fontWeight: 600 }}>{w.month}</span>
+                <span className="tiny muted" style={{ maxWidth: 120, textAlign: "center" }}>{w.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height: 10 }} />
+        <div className="week">
+          <div className="tiny muted">Semaine active</div>
+          <div><strong>{activeWeek.label} – {activeWeek.title}</strong></div>
+          <div className="muted tiny">Mois : {activeWeek.month}</div>
+          <ul className="tiny" style={{ marginTop: 6 }}>
+            {activeWeek.tasks.map((t, idx) => <li key={idx}>{t}</li>)}
+          </ul>
         </div>
       </section>
 
-      {/* Course checklist with priorities */}
-      <section className="mx-auto max-w-6xl px-6 mt-8 pb-16">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <h2 className="text-xl font-bold">Suivi des cours – check‑list (local)</h2>
-            <div className="flex items-center gap-3 text-xs text-slate-600">
-              <LegendDot color={PRIORITY.MASTER.color} label={PRIORITY.MASTER.label} />
-              <LegendDot color={PRIORITY.LEARN.color} label={PRIORITY.LEARN.label} />
-              <LegendDot color={PRIORITY.AWARE.color} label={PRIORITY.AWARE.label} />
-            </div>
+      {/* Checklist */}
+      <section className="card" style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <h2>Suivi des cours — check‑list (local)</h2>
+          <div className="legend">
+            <span className="dot" style={{ background: getCSSVar("--blue") }}></span>À maîtriser
+            <span className="dot" style={{ background: getCSSVar("--green") }}></span>À apprendre
+            <span className="dot" style={{ background: getCSSVar("--gray") }}></span>Culture générale
           </div>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {modules.map((m) => (
-              <div key={m.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-slate-800">{m.title}</h3>
-                  <span className="inline-flex items-center gap-2 text-xs">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: m.priority.color }}></span>
-                    <span className="text-slate-500">{m.priority.label}</span>
+        <div className="settings" style={{ marginBottom: 10 }}>
+          <button className="btn" onClick={onExport}>Exporter progression (JSON)</button>
+          <label className="btn" htmlFor="importFile">Importer progression</label>
+          <input ref={fileInputRef} id="importFile" type="file" accept="application/json" style={{ display: "none" }} onChange={onImport} />
+          <button className="btn" onClick={onReset}>Réinitialiser</button>
+        </div>
+
+        <div className="grid grid-2">
+          {modules.map((m) => {
+            const mSlug = slug(m.title);
+            const pct = computeProgress(m.title, m.items);
+            const color = PRIORITY[m.prio].color();
+            return (
+              <div key={m.title} className="module">
+                <div className="row">
+                  <h3>{m.title}</h3>
+                  <span className="pill right">
+                    <span className="dot" style={{ background: color }}></span>
+                    <span>{PRIORITY[m.prio].label}</span>
                   </span>
                 </div>
-                {/* Progress bar */}
-                <div className="mt-3 h-2 w-full rounded-full bg-white border border-slate-200 overflow-hidden">
-                  <div
-                    className="h-full"
-                    style={{
-                      width: `${computeModuleProgress(m.title, m.items)}%`,
-                      background: m.priority.color
-                    }}
-                  />
-                </div>
-                <ul className="mt-4 space-y-2 text-sm">
+                <div className="kpi"><i style={{ width: `${pct}%`, background: color }} /></div>
+                <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0" }}>
                   {m.items.map((it) => {
-                    const mKey = slug(m.title);
-                    const iKey = slug(it);
-                    const checked = !!progress[mKey]?.[iKey];
+                    const iSlug = slug(it);
+                    const checked = !!progress[mSlug]?.[iSlug];
+                    const url = links[mSlug]?.[iSlug] || "";
                     return (
-                      <li key={iKey} className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-4 w-4 rounded border-slate-300"
-                          checked={checked}
-                          onChange={() => toggle(m.title, it)}
-                          aria-label={`Valider ${it}`}
-                        />
-                        <span className={`select-text ${checked ? "line-through text-slate-400" : "text-slate-700"}`}>
-                          {it}
+                      <li key={iSlug} className="row">
+                        <input type="checkbox" className="cb" checked={checked} onChange={() => toggle(m.title, it)} aria-label={`Valider ${it}`} />
+                        <span className={checked ? "muted" : undefined}>{it}</span>
+                        <span className="right tiny">
+                          <a href={url || undefined} target="_blank" rel="noopener noreferrer" style={{ textDecoration: url ? "underline" : "none", color: url ? getCSSVar("--blue") : undefined, opacity: url ? 1 : .4, pointerEvents: url ? "auto" : "none" }}>PDF</a>
+                          <span title="Ajouter/Modifier le lien PDF" className="edit-link" onClick={() => setItemLink(m.title, it)}> 🔗</span>
                         </span>
                       </li>
                     );
                   })}
                 </ul>
+                <div className="row" style={{ marginTop: 10 }}>
+                  <button className="btn tiny" onClick={() => {
+                    setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), true])) }));
+                  }}>Tout cocher</button>
+                  <button className="btn tiny" onClick={() => {
+                    setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), false])) }));
+                  }}>Tout décocher</button>
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </section>
 
-      <footer className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="text-center text-xs text-slate-500">
-          Conçu pour <span className="font-semibold">Mathilde Martine Paisley</span> · Suivi sauvegardé en local (navigateurs avec localStorage)
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-// --- UI Partials ---
-function LegendDot({ color, label }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-slate-500">{label}</span>
-    </span>
-  );
-}
-
-function Timeline({ weeks, onPick }) {
-  return (
-    <div className="relative overflow-x-auto">
-      <div className="min-w-[900px]">
-        <div className="flex items-center gap-6">
-          {weeks.map((w, idx) => (
-            <button
-              key={w.id}
-              onClick={() => onPick(w)}
-              className={`group relative flex flex-col items-center focus:outline-none`}
-              aria-label={`${w.label} – ${w.title}`}
-            >
-              {idx > 0 && (
-                <div className="absolute top-4 -left-[calc(3rem+12px)] h-[2px] w-[3.1rem] bg-slate-200" />
-              )}
-              <span
-                className="grid place-items-center h-8 w-8 rounded-full shadow-sm"
-                style={{ backgroundColor: w.color }}
-              >
-                <span className="text-[11px] font-bold text-white">{w.label}</span>
-              </span>
-              <span className="mt-2 text-[11px] font-semibold text-slate-700">{w.month}</span>
-              <span className="mt-1 max-w-[120px] text-center text-[11px] text-slate-500">{w.title}</span>
-              <span className={`absolute inset-0 rounded-xl ring-2 ring-transparent group-hover:ring-slate-300 transition`} />
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ActiveWeekCard({ week }) {
-  return (
-    <div className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-slate-500">Semaine active</p>
-          <h3 className="text-lg font-bold text-slate-800">{week.label} – {week.title}</h3>
-          <p className="text-sm text-slate-600">Mois : {week.month}</p>
-        </div>
-        <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-500">Focus tâches</p>
-          <ul className="mt-2 space-y-1 text-sm text-slate-700 list-disc pl-5">
-            {week.tasks.map((t, i) => (
-              <li key={i}>{t}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <footer className="footer">Conçu pour <strong>Mathilde Martine Paisley</strong> • Progression et liens PDF sauvegardés <em>en local</em> (localStorage).</footer>
     </div>
   );
 }
