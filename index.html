@@ -1,310 +1,378 @@
-// ---------- Styles ----------
-const styles = `
-:root{
-  --bg:#f7f9fc; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
-  --blue:#0ea5e9; --green:#22c55e; --gray:#94a3b8; --orange:#f97316;
-  --shadow:0 6px 20px rgba(2,6,23,.08); --radius:16px;
-}
-*{box-sizing:border-box}
-.wrap{max-width:1120px;margin:auto;padding:28px}
-body{margin:0;background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",sans-serif}
-h1,h2,h3{margin:0 0 .5rem}
-a{color:var(--blue)}
-.header{display:flex;gap:16px;align-items:end;justify-content:space-between;margin-bottom:18px}
-.badge{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
-.grid{display:grid;gap:16px}
-@media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}}
-.legend{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:12px}
-.dot{width:10px;height:10px;border-radius:50%}
-.module{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px}
-.module h3{font-size:16px}
-.row{display:flex;align-items:flex-start;gap:10px}
-.cb{width:16px;height:16px;margin-top:2px}
-.muted{color:var(--muted)}
-.kpi{height:8px;background:#fff;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:10px 0}
-.kpi>i{display:block;height:100%}
-.pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
-.spacer{height:10px}
-.title{font-weight:800;font-size:26px}
-.sub{color:var(--muted)}
-.btn{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;font-size:13px;cursor:pointer}
-.btn:hover{border-color:#cbd5e1}
-.right{margin-left:auto}
-.tiny{font-size:12px}
-.edit-link{opacity:.7;cursor:pointer}
-.edit-link:hover{opacity:1}
-.timeline{overflow-x:auto;padding-bottom:6px}
-.tl{display:flex;gap:18px;align-items:center;min-width:900px}
-.tl .b{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
-.tl .ball{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:var(--shadow)}
-.tl .line{position:absolute;top:16px;left:-38px;width:38px;height:2px;background:var(--line)}
-.week{background:#f1f5f9;border:1px solid var(--line);border-radius:12px;padding:12px}
-.footer{color:var(--muted);text-align:center;margin:20px 0 40px}
-.settings{display:flex;gap:10px;flex-wrap:wrap}
-.settings input[type="file"]{display:none}
-`;
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Python & Data - Mathilde Martine Paisley</title>
+    
+    <style>
+        :root {
+            --bg: #f7f9fc; --card: #ffffff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
+            --blue: #0ea5e9; --green: #22c55e; --gray: #94a3b8; --orange: #f97316;
+            --shadow: 0 6px 20px rgba(2,6,23,.08); --radius: 16px;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: linear-gradient(180deg,#fff,var(--bg)); color: var(--ink); font: 15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",sans-serif; }
+        .wrap { max-width: 1120px; margin: auto; padding: 28px; }
+        h1, h2, h3 { margin: 0 0 .5rem; }
+        a { color: var(--blue); }
+        .header { display: flex; gap: 16px; align-items: end; justify-content: space-between; flex-wrap: wrap; margin-bottom: 18px; }
+        .badge { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow); }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+        .grid { display: grid; gap: 16px; }
+        @media(min-width: 900px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+        .legend { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .module { background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+        .module h3 { font-size: 16px; }
+        .row { display: flex; align-items: flex-start; gap: 10px; }
+        .cb { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; }
+        .muted { color: var(--muted); }
+        .kpi { height: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin: 10px 0; }
+        .kpi > i { display: block; height: 100%; }
+        .pill { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+        .spacer { height: 10px; }
+        .title { font-weight: 800; font-size: 26px; }
+        .sub { color: var(--muted); }
+        .btn { appearance: none; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 10px; font-size: 13px; cursor: pointer; }
+        .btn:hover { border-color: #cbd5e1; }
+        .right { margin-left: auto; }
+        .tiny { font-size: 12px; }
+        .edit-link { opacity: .7; cursor: pointer; user-select: none; }
+        .edit-link:hover { opacity: 1; }
+        .timeline { overflow-x: auto; padding-bottom: 6px; }
+        .tl { display: flex; gap: 18px; align-items: center; min-width: 900px; }
+        .tl button.b { all: unset; box-sizing: border-box; position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .tl .ball { width: 32px; height: 32px; border-radius: 999px; display: grid; place-items: center; color: #fff; font-weight: 700; box-shadow: var(--shadow); }
+        .tl .line { position: absolute; top: 16px; left: -38px; width: 38px; height: 2px; background: var(--line); }
+        .week { background: #f1f5f9; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+        .footer { color: var(--muted); text-align: center; margin: 20px 0 40px; }
+        .settings { display: flex; gap: 10px; flex-wrap: wrap; }
+        .settings input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
 
-// ---------- Helpers ----------
-const slug = (s: string) => s
-  .toLowerCase()
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "") // remove diacritics
-  .replace(/[^a-z0-9]+/g, "-")
-  .replace(/(^-|-$)/g, "");
+    <div class="wrap">
+        <header class="header">
+            <div>
+                <div class="title">Plan Python & Data — <span style="color: var(--blue);">Mathilde Martine Paisley</span></div>
+                <div class="sub">Rôle : <strong>Cheffe/Direction de projet</strong> (SIRH, Data, Digital) • Objectif : maîtriser <strong>mécanismes</strong> (Python, APIs, SQL, Data‑Viz) sans devenir dev.</div>
+            </div>
+            <div class="badge tiny">Cadence : <strong>2 soirs × 1h</strong> + <strong>1 matinée week‑end × 2h</strong></div>
+        </header>
 
-const loadJSON = <T,>(k: string): T | null => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) as T : null; } catch { return null; } };
-const saveJSON = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-
-// ---------- Types ----------
-type Week = { id: number; label: string; month: string; color: string; title: string; tasks: string[] };
-
-type ModuleDef = { title: string; prio: keyof typeof PRIORITY; items: string[] };
-
-// ---------- Constants (use CSS vars directly to avoid getComputedStyle timing) ----------
-const PRIORITY = {
-  MASTER: { label: "À maîtriser", color: "var(--blue)" },
-  LEARN:  { label: "À apprendre", color: "var(--green)" },
-  AWARE:  { label: "Culture générale", color: "var(--gray)" }
-} as const;
-
-const WEEKS: Week[] = [
-  { id:1, label:"S1", month:"Février", color:"var(--blue)",  title:"Bases Python", tasks:["Variables, conditions, boucles","Fonctions simples","Lire/écrire des fichiers"]},
-  { id:2, label:"S2", month:"Février", color:"var(--blue)",  title:"POO & organisation du code", tasks:["Classes & objets (bases)","Héritage simple","Modules & bibliothèques","Mini‑projet : calculatrice"]},
-  { id:3, label:"S3", month:"Février", color:"var(--blue)",  title:"SQL – bases de données", tasks:["SELECT/INSERT/UPDATE","Modèle simple RH (employés, salaires)","Jointures & filtres"]},
-  { id:4, label:"S4", month:"Février", color:"var(--blue)",  title:"Mini‑projet Python + SQL", tasks:["Importer CSV → SQL","Script d’extraction automatisé","Affichage des résultats"]},
-  { id:5, label:"S5", month:"Mars",    color:"var(--green)", title:"API REST", tasks:["HTTP requests (GET/POST)","JSON & parsing","Connexion à une API publique"]},
-  { id:6, label:"S6", month:"Mars",    color:"var(--green)", title:"Pandas & NumPy", tasks:["Importer/Nettoyer un CSV","Stats descriptives","Préparer jeu RH/paie"]},
-  { id:7, label:"S7", month:"Mars",    color:"var(--green)", title:"Data‑Viz (Matplotlib/Seaborn)", tasks:["Histogrammes & courbes","Salaires par service","Storytelling visuel"]},
-  { id:8, label:"S8", month:"Mars",    color:"var(--green)", title:"Mini‑projet API + Viz", tasks:["Appeler une API","Nettoyer avec Pandas","Graphique dynamique"]},
-  { id:9, label:"S9", month:"Avril",   color:"var(--orange)",title:"Flask ou Streamlit", tasks:["Mini‑app web/board","Page simple déployée","Architecture propre"]},
-  { id:10,label:"S10",month:"Avril",   color:"var(--orange)",title:"Projet – Dashboard RH", tasks:["Base SQL + API + Viz","KPIs RH","Filtres & navigation"]},
-  { id:11,label:"S11",month:"Avril",   color:"var(--orange)",title:"Améliorations + Doc", tasks:["Ergonomie","Doc utilisateur","Pitch de soutenance"]},
-  { id:12,label:"S12",month:"Avril",   color:"var(--orange)",title:"Validation & Révisions", tasks:["Tests finaux","Relecture Python/SQL","Q&A jury"]}
-];
-
-const MODULES: ModuleDef[] = [
-  { title:"Piloter la production de contenus digitaux", prio:"AWARE", items:[
-    "Pourquoi se former / Intro","Cible & brief créatif","Gestion & mise en place opérationnelle","Proposition & application"
-  ]},
-  { title:"HTML / CSS / Bootstrap", prio:"AWARE", items:[
-    "HTML : structure, multimédia, formulaires","CSS : sélecteurs, box‑model, layout Grid/Flex, responsive","Bootstrap : grille, composants, Hello world","Qualité, SASS, SEO, déploiement"
-  ]},
-  { title:"JavaScript (Front)", prio:"AWARE", items:[
-    "Événementiel, DOM, Fetch/AJAX, Promesses","Objets & classes (bases)","JSON, Canvas","jQuery (culture)"
-  ]},
-  { title:"PHP (culture générale)", prio:"AWARE", items:[
-    "Syntaxe, fonctions, tableaux, boucles","Superglobales, sécurité, fichiers","POO, erreurs, MVC, ORM PHP"
-  ]},
-  { title:"Bases de données relationnelles (SQL)", prio:"MASTER", items:[
-    "Modèle conceptuel & logique","Créer/alimenter une BDD, requêtes","Jointures, fonctions SQL","Projet : créer & administrer la BDD"
-  ]},
-  { title:"NoSQL / MongoDB", prio:"LEARN", items:["Concepts NoSQL","Créer & administrer MongoDB"]},
-  { title:"Python – fondamentaux", prio:"MASTER", items:[
-    "Interpréteur, environnements","Variables, conditions, boucles","Structures de données","Fonctions, modules, tests unitaires","POO : classes, héritage, dunders"
-  ]},
-  { title:"Python – Web & APIs", prio:"MASTER", items:[
-    "Fichiers, chaînes, temps","Requêtes HTTP & API REST","Flask/Jinja, déploiement","Django : modèles, vues"
-  ]},
-  { title:"Data & Visualisation (Python)", prio:"MASTER", items:[
-    "NumPy / Pandas (bases → +)","Matplotlib / Seaborn","Bokeh / Streamlit","Présentations impactantes"
-  ]},
-  { title:"React Native (mobile)", prio:"AWARE", items:[
-    "Expo, composants, state/props","Flexbox, navigation, Redux","SQLite local, déploiement","Projet mobile (culture)"
-  ]},
-  { title:"Concevoir & utiliser des API", prio:"MASTER", items:[
-    "Design d’API, sécurisation accès","OAuth, APIs Google/AWS, paiements","Utilisation & intégration"
-  ]},
-  { title:"Git / GitHub / GitLab", prio:"LEARN", items:[
-    "CLI, init/commit/push","Branches & rebase","Bonnes pratiques, projet GitHub","Intro GitLab"
-  ]},
-  { title:"Maintenance & documentation", prio:"LEARN", items:[
-    "Doc d’architecture & code","Améliorations, doc utilisateur","Dette technique (notions)","Pentest (culture)"
-  ]}
-];
-
-// ---------- Component ----------
-export default function MathildePlanApp() {
-  // style injection
-  useEffect(() => {
-    const tag = document.createElement("style"); tag.innerHTML = styles; document.head.appendChild(tag);
-    return () => { try { document.head.removeChild(tag); } catch {} };
-  }, []);
-
-  // weeks & active selection
-  const weeks = useMemo(() => WEEKS, []);
-  const [activeWeek, setActiveWeek] = useState<Week>(weeks[0]);
-
-  // storage state
-  const STORAGE_PROGRESS = "mathilde-progress-v1";
-  const STORAGE_LINKS    = "mathilde-links-v1";
-  const [progress, setProgress] = useState<Record<string, Record<string, boolean>>>(() => loadJSON(STORAGE_PROGRESS) || {});
-  const [links, setLinks]       = useState<Record<string, Record<string, string>>>(() => loadJSON(STORAGE_LINKS) || {});
-  useEffect(() => { saveJSON(STORAGE_PROGRESS, progress); }, [progress]);
-  useEffect(() => { saveJSON(STORAGE_LINKS, links); }, [links]);
-
-  const modules = useMemo(() => MODULES, []);
-
-  const toggle = (moduleTitle: string, item: string) => {
-    const m = slug(moduleTitle), k = slug(item);
-    setProgress(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: !prev[m]?.[k] } }));
-  };
-  const computeProgress = (moduleTitle: string, items: string[]) => {
-    const m = slug(moduleTitle); const done = items.filter(it => progress[m]?.[slug(it)]).length;
-    return Math.round((done / items.length) * 100);
-  };
-  const setItemLink = (moduleTitle: string, item: string) => {
-    const m = slug(moduleTitle), k = slug(item);
-    const current = links[m]?.[k] || "";
-    const newUrl = window.prompt(`Colle le lien Google Drive du PDF pour:\n${moduleTitle} → ${item}`, current);
-    if (newUrl !== null) setLinks(prev => ({ ...prev, [m]: { ...(prev[m]||{}), [k]: newUrl.trim() } }));
-  };
-
-  // export / import / reset
-  const fileRef = useRef<HTMLInputElement>(null);
-  const onExport = () => {
-    const blob = new Blob([JSON.stringify({ progress, links }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const a = document.createElement("a");
-    a.href = url; a.download = "mathilde_progress.json"; a.click(); URL.revokeObjectURL(url);
-  };
-  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    const rd = new FileReader();
-    rd.onload = () => {
-      try { const data = JSON.parse(String(rd.result)); setProgress(data.progress||{}); setLinks(data.links||{}); alert("Import OK ✔"); }
-      catch { alert("Fichier invalide"); }
-    };
-    rd.readAsText(f); e.target.value = "";
-  };
-  const onReset = () => { if (confirm("Réinitialiser toute la progression et les liens ?")) { setProgress({}); setLinks({}); } };
-
-  // helper for mass pasting links
-  useEffect(() => { (window as any).pasteLinksSequential = (arr: string[]) => {
-    let idx = 0; setLinks(prev => {
-      const draft: Record<string, Record<string, string>> = { ...prev };
-      modules.forEach(m => { const ms = slug(m.title); draft[ms] = draft[ms] || {}; m.items.forEach(it => { if (idx < arr.length) draft[ms][slug(it)] = String(arr[idx++]); }); });
-      return draft; });
-  }; }, [modules]);
-
-  // ---------- Self-tests ----------
-  useEffect(() => {
-    try {
-      console.assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug removes diacritics & punctuation");
-      console.assert(slug("  Python  Basics  ") === "python-basics", "slug collapses spaces");
-      console.assert(WEEKS.length === 12, "12 weeks expected");
-      console.assert(new Set(WEEKS.map(w=>w.id)).size === WEEKS.length, "week ids unique");
-      // extra test: computeProgress baseline
-      const items = ["A","B","C"]; const mTitle = "Test";
-      const tmp = (prog: Record<string, Record<string, boolean>>) => { const m=slug(mTitle); const d=items.filter(it=>prog[m]?.[slug(it)]).length; return Math.round((d/items.length)*100); };
-      console.assert(tmp({}) === 0, "progress 0% expected");
-      console.assert(computeProgress(mTitle, items) === 0, "computeProgress 0% on empty state");
-      console.log("✔ Self-tests passed");
-    } catch (e) { console.error("✖ Self-tests failed", e); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <div className="wrap">
-      <style>{styles}</style>
-
-      <header className="header">
-        <div>
-          <div className="title">Plan Python & Data — <span style={{ color: "var(--blue)" }}>Mathilde Martine Paisley</span></div>
-          <div className="sub">Rôle : <strong>Cheffe/Direction de projet</strong> (SIRH, Data, Digital) • Objectif : maîtriser <strong>mécanismes</strong> (Python, APIs, SQL, Data‑Viz) sans devenir dev.</div>
-        </div>
-        <div className="badge tiny">Cadence : <strong>2 soirs × 1h</strong> + <strong>1 matinée week‑end × 2h</strong></div>
-      </header>
-
-      {/* Timeline */}
-      <section className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <h2>Frise chronologique (12 semaines)</h2>
-          <div className="legend">
-            <span className="dot" style={{ background: "var(--blue)" }} />Février
-            <span className="dot" style={{ background: "var(--green)" }} />Mars
-            <span className="dot" style={{ background: "var(--orange)" }} />Avril
-          </div>
-        </div>
-
-        <div className="timeline">
-          <div className="tl">
-            {weeks.map((w, i) => (
-              <button key={w.id} className="b" onClick={() => setActiveWeek(w)} aria-label={`${w.label} – ${w.title}`} title={w.title}>
-                {i>0 && <span className="line"/>}
-                <span className="ball" style={{ background: w.color }}><span style={{ fontSize: 11 }}>{w.label}</span></span>
-                <span className="tiny" style={{ fontWeight: 600 }}>{w.month}</span>
-                <span className="tiny muted" style={{ maxWidth: 120, textAlign: "center" }}>{w.title}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="spacer" />
-        <div className="week">
-          <div className="tiny muted">Semaine active</div>
-          <div><strong>{activeWeek.label} – {activeWeek.title}</strong></div>
-          <div className="muted tiny">Mois : {activeWeek.month}</div>
-          <ul className="tiny" style={{ marginTop: 6 }}>{activeWeek.tasks.map((t, idx) => <li key={idx}>{t}</li>)}</ul>
-        </div>
-      </section>
-
-      {/* Checklist */}
-      <section className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <h2>Suivi des cours — check‑list (local)</h2>
-          <div className="legend">
-            <span className="dot" style={{ background: "var(--blue)" }} />À maîtriser
-            <span className="dot" style={{ background: "var(--green)" }} />À apprendre
-            <span className="dot" style={{ background: "var(--gray)" }} />Culture générale
-          </div>
-        </div>
-
-        <div className="settings" style={{ marginBottom: 10 }}>
-          <button className="btn" onClick={onExport}>Exporter progression (JSON)</button>
-          <label className="btn" htmlFor="importFile">Importer progression</label>
-          <input id="importFile" ref={fileRef} type="file" accept="application/json" onChange={onImport} />
-          <button className="btn" onClick={onReset}>Réinitialiser</button>
-        </div>
-
-        <div className="grid grid-2">
-          {modules.map((m) => {
-            const mSlug = slug(m.title);
-            const pct = computeProgress(m.title, m.items);
-            const color = PRIORITY[m.prio].color;
-            return (
-              <div key={m.title} className="module">
-                <div className="row">
-                  <h3>{m.title}</h3>
-                  <span className="pill right"><span className="dot" style={{ background: color }} />{PRIORITY[m.prio].label}</span>
+        <section class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <h2>Frise chronologique (12 semaines)</h2>
+                <div class="legend">
+                    <span class="dot" style="background: var(--blue);"></span>Février
+                    <span class="dot" style="background: var(--green);"></span>Mars
+                    <span class="dot" style="background: var(--orange);"></span>Avril
                 </div>
-                <div className="kpi"><i style={{ width: `${pct}%`, background: color }} /></div>
-                <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0" }}>
-                  {m.items.map(it => {
-                    const iSlug = slug(it);
-                    const checked = !!progress[mSlug]?.[iSlug];
-                    const url = links[mSlug]?.[iSlug] || "";
-                    return (
-                      <li key={iSlug} className="row">
-                        <input type="checkbox" className="cb" checked={checked} onChange={() => toggle(m.title, it)} aria-label={`Valider ${it}`} />
-                        <span className={checked ? "muted" : undefined}>{it}</span>
-                        <span className="right tiny">
-                          <a href={url || undefined} target="_blank" rel="noopener noreferrer" style={{ textDecoration: url ? "underline" : "none", color: url ? "var(--blue)" : undefined, opacity: url ? 1 : .4, pointerEvents: url ? "auto" : "none" }}>PDF</a>
-                          <span title="Ajouter/Modifier le lien PDF" className="edit-link" onClick={() => setItemLink(m.title, it)}> 🔗</span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div className="row" style={{ marginTop: 10 }}>
-                  <button className="btn tiny" onClick={() => setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), true])) }))}>Tout cocher</button>
-                  <button className="btn tiny" onClick={() => setProgress(prev => ({ ...prev, [mSlug]: Object.fromEntries(m.items.map(it => [slug(it), false])) }))}>Tout décocher</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+            </div>
 
-      <footer className="footer">Conçu pour <strong>Mathilde Martine Paisley</strong> • Progression et liens PDF sauvegardés <em>en local</em> (localStorage).</footer>
+            <div class="timeline">
+                <div class="tl" id="timeline-container">
+                    </div>
+            </div>
+            <div class="spacer"></div>
+            <div class="week" id="active-week-display">
+                </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                <h2>Suivi des cours — check‑list (local)</h2>
+                <div class="legend">
+                    <span class="dot" style="background: var(--blue);"></span>À maîtriser
+                    <span class="dot" style="background: var(--green);"></span>À apprendre
+                    <span class="dot" style="background: var(--gray);"></span>Culture générale
+                </div>
+            </div>
+
+            <div class="settings" style="margin-bottom: 10px;">
+                <button class="btn" id="export-btn">Exporter progression (JSON)</button>
+                <label class="btn" for="importFile">Importer progression</label>
+                <input id="importFile" type="file" accept="application/json">
+                <button class="btn" id="reset-btn">Réinitialiser</button>
+            </div>
+
+            <div class="grid grid-2" id="modules-grid">
+                </div>
+        </section>
+
+        <footer class="footer">Conçu pour <strong>Mathilde Martine Paisley</strong> • Progression et liens PDF sauvegardés <em>en local</em> (localStorage).</footer>
     </div>
-  );
-}
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ---------- Constants ----------
+            const PRIORITY = {
+                MASTER: { label: "À maîtriser", color: "var(--blue)" },
+                LEARN:  { label: "À apprendre", color: "var(--green)" },
+                AWARE:  { label: "Culture générale", color: "var(--gray)" }
+            };
+
+            const WEEKS = [
+                { id:1, label:"S1", month:"Février", color:"var(--blue)",  title:"Bases Python", tasks:["Variables, conditions, boucles","Fonctions simples","Lire/écrire des fichiers"]},
+                { id:2, label:"S2", month:"Février", color:"var(--blue)",  title:"POO & organisation du code", tasks:["Classes & objets (bases)","Héritage simple","Modules & bibliothèques","Mini‑projet : calculatrice"]},
+                { id:3, label:"S3", month:"Février", color:"var(--blue)",  title:"SQL – bases de données", tasks:["SELECT/INSERT/UPDATE","Modèle simple RH (employés, salaires)","Jointures & filtres"]},
+                { id:4, label:"S4", month:"Février", color:"var(--blue)",  title:"Mini‑projet Python + SQL", tasks:["Importer CSV → SQL","Script d’extraction automatisé","Affichage des résultats"]},
+                { id:5, label:"S5", month:"Mars",    color:"var(--green)", title:"API REST", tasks:["HTTP requests (GET/POST)","JSON & parsing","Connexion à une API publique"]},
+                { id:6, label:"S6", month:"Mars",    color:"var(--green)", title:"Pandas & NumPy", tasks:["Importer/Nettoyer un CSV","Stats descriptives","Préparer jeu RH/paie"]},
+                { id:7, label:"S7", month:"Mars",    color:"var(--green)", title:"Data‑Viz (Matplotlib/Seaborn)", tasks:["Histogrammes & courbes","Salaires par service","Storytelling visuel"]},
+                { id:8, label:"S8", month:"Mars",    color:"var(--green)", title:"Mini‑projet API + Viz", tasks:["Appeler une API","Nettoyer avec Pandas","Graphique dynamique"]},
+                { id:9, label:"S9", month:"Avril",   color:"var(--orange)",title:"Flask ou Streamlit", tasks:["Mini‑app web/board","Page simple déployée","Architecture propre"]},
+                { id:10,label:"S10",month:"Avril",   color:"var(--orange)",title:"Projet – Dashboard RH", tasks:["Base SQL + API + Viz","KPIs RH","Filtres & navigation"]},
+                { id:11,label:"S11",month:"Avril",   color:"var(--orange)",title:"Améliorations + Doc", tasks:["Ergonomie","Doc utilisateur","Pitch de soutenance"]},
+                { id:12,label:"S12",month:"Avril",   color:"var(--orange)",title:"Validation & Révisions", tasks:["Tests finaux","Relecture Python/SQL","Q&A jury"]}
+            ];
+
+            const MODULES = [
+                { title:"Piloter la production de contenus digitaux", prio:"AWARE", items:["Pourquoi se former / Intro","Cible & brief créatif","Gestion & mise en place opérationnelle","Proposition & application"]},
+                { title:"HTML / CSS / Bootstrap", prio:"AWARE", items:["HTML : structure, multimédia, formulaires","CSS : sélecteurs, box‑model, layout Grid/Flex, responsive","Bootstrap : grille, composants, Hello world","Qualité, SASS, SEO, déploiement"]},
+                { title:"JavaScript (Front)", prio:"AWARE", items:["Événementiel, DOM, Fetch/AJAX, Promesses","Objets & classes (bases)","JSON, Canvas","jQuery (culture)"]},
+                { title:"PHP (culture générale)", prio:"AWARE", items:["Syntaxe, fonctions, tableaux, boucles","Superglobales, sécurité, fichiers","POO, erreurs, MVC, ORM PHP"]},
+                { title:"Bases de données relationnelles (SQL)", prio:"MASTER", items:["Modèle conceptuel & logique","Créer/alimenter une BDD, requêtes","Jointures, fonctions SQL","Projet : créer & administrer la BDD"]},
+                { title:"NoSQL / MongoDB", prio:"LEARN", items:["Concepts NoSQL","Créer & administrer MongoDB"]},
+                { title:"Python – fondamentaux", prio:"MASTER", items:["Interpréteur, environnements","Variables, conditions, boucles","Structures de données","Fonctions, modules, tests unitaires","POO : classes, héritage, dunders"]},
+                { title:"Python – Web & APIs", prio:"MASTER", items:["Fichiers, chaînes, temps","Requêtes HTTP & API REST","Flask/Jinja, déploiement","Django : modèles, vues"]},
+                { title:"Data & Visualisation (Python)", prio:"MASTER", items:["NumPy / Pandas (bases → +)","Matplotlib / Seaborn","Bokeh / Streamlit","Présentations impactantes"]},
+                { title:"React Native (mobile)", prio:"AWARE", items:["Expo, composants, state/props","Flexbox, navigation, Redux","SQLite local, déploiement","Projet mobile (culture)"]},
+                { title:"Concevoir & utiliser des API", prio:"MASTER", items:["Design d’API, sécurisation accès","OAuth, APIs Google/AWS, paiements","Utilisation & intégration"]},
+                { title:"Git / GitHub / GitLab", prio:"LEARN", items:["CLI, init/commit/push","Branches & rebase","Bonnes pratiques, projet GitHub","Intro GitLab"]},
+                { title:"Maintenance & documentation", prio:"LEARN", items:["Doc d’architecture & code","Améliorations, doc utilisateur","Dette technique (notions)","Pentest (culture)"]}
+            ];
+
+            // ---------- Helpers ----------
+            const slug = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+            const loadJSON = (k) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } };
+            const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+            // ---------- State Management ----------
+            const STORAGE_PROGRESS = "mathilde-progress-v1";
+            const STORAGE_LINKS    = "mathilde-links-v1";
+
+            let state = {
+                activeWeek: WEEKS[0],
+                progress: loadJSON(STORAGE_PROGRESS) || {},
+                links: loadJSON(STORAGE_LINKS) || {}
+            };
+
+            // ---------- DOM Elements ----------
+            const timelineContainer = document.getElementById('timeline-container');
+            const activeWeekDisplay = document.getElementById('active-week-display');
+            const modulesGrid = document.getElementById('modules-grid');
+            const exportBtn = document.getElementById('export-btn');
+            const importInput = document.getElementById('importFile');
+            const resetBtn = document.getElementById('reset-btn');
+
+            // ---------- Core Logic & Rendering ----------
+            const computeProgress = (moduleTitle, items) => {
+                const m = slug(moduleTitle);
+                const done = items.filter(it => state.progress[m]?.[slug(it)]).length;
+                return Math.round((done / (items.length || 1)) * 100);
+            };
+
+            function render() {
+                renderTimeline();
+                renderActiveWeek();
+                renderModules();
+            }
+            
+            function renderTimeline() {
+                timelineContainer.innerHTML = WEEKS.map((w, i) => `
+                    <button class="b" data-week-id="${w.id}" title="${w.title}">
+                        ${i > 0 ? '<span class="line"></span>' : ''}
+                        <span class="ball" style="background: ${w.color};"><span style="font-size: 11px;">${w.label}</span></span>
+                        <span class="tiny" style="font-weight: 600;">${w.month}</span>
+                        <span class="tiny muted" style="max-width: 120px; text-align: center;">${w.title}</span>
+                    </button>
+                `).join('');
+            }
+            
+            function renderActiveWeek() {
+                const w = state.activeWeek;
+                activeWeekDisplay.innerHTML = `
+                    <div class="tiny muted">Semaine active</div>
+                    <div><strong>${w.label} – ${w.title}</strong></div>
+                    <div class="muted tiny">Mois : ${w.month}</div>
+                    <ul class="tiny" style="margin-top: 6px; padding-left: 20px;">
+                        ${w.tasks.map(t => `<li>${t}</li>`).join('')}
+                    </ul>
+                `;
+            }
+
+            function renderModules() {
+                modulesGrid.innerHTML = MODULES.map(m => {
+                    const mSlug = slug(m.title);
+                    const pct = computeProgress(m.title, m.items);
+                    const color = PRIORITY[m.prio].color;
+                    
+                    return `
+                        <div class="module" data-module-slug="${mSlug}" data-module-title="${m.title}">
+                            <div class="row">
+                                <h3>${m.title}</h3>
+                                <span class="pill right"><span class="dot" style="background: ${color}"></span>${PRIORITY[m.prio].label}</span>
+                            </div>
+                            <div class="kpi"><i style="width: ${pct}%; background: ${color}"></i></div>
+                            <ul style="list-style: none; padding: 0; margin: 10px 0 0;">
+                                ${m.items.map(it => {
+                                    const iSlug = slug(it);
+                                    const checked = !!state.progress[mSlug]?.[iSlug];
+                                    const url = state.links[mSlug]?.[iSlug] || "";
+                                    return `
+                                        <li class="row">
+                                            <input type="checkbox" class="cb cb-item" ${checked ? 'checked' : ''} data-item-slug="${iSlug}" data-item-title="${it}">
+                                            <span class="${checked ? 'muted' : ''}">${it}</span>
+                                            <span class="right tiny">
+                                                <a href="${url || '#'}" target="_blank" rel="noopener noreferrer" style="text-decoration: ${url ? 'underline' : 'none'}; color: ${url ? 'var(--blue)' : 'inherit'}; opacity: ${url ? 1 : .4}; pointer-events: ${url ? 'auto' : 'none'};">PDF</a>
+                                                <span title="Ajouter/Modifier le lien PDF" class="edit-link" data-item-slug="${iSlug}" data-item-title="${it}"> 🔗</span>
+                                            </span>
+                                        </li>
+                                    `;
+                                }).join('')}
+                            </ul>
+                            <div class="row" style="margin-top: 10px; gap: 6px;">
+                                <button class="btn tiny btn-check-all">Tout cocher</button>
+                                <button class="btn tiny btn-uncheck-all">Tout décocher</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // ---------- Event Delegation Setup ----------
+            timelineContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('button.b');
+                if (!button) return;
+                const weekId = parseInt(button.dataset.weekId, 10);
+                const newWeek = WEEKS.find(w => w.id === weekId);
+                if (newWeek) {
+                    state.activeWeek = newWeek;
+                    renderActiveWeek();
+                }
+            });
+
+            modulesGrid.addEventListener('click', (e) => {
+                const moduleEl = e.target.closest('.module');
+                if (!moduleEl) return;
+                const mTitle = moduleEl.dataset.moduleTitle;
+                const mSlug = moduleEl.dataset.moduleSlug;
+                
+                // Checkbox toggle
+                if (e.target.classList.contains('cb-item')) {
+                    const iTitle = e.target.dataset.itemTitle;
+                    state.progress = { ...state.progress, [mSlug]: { ...(state.progress[mSlug] || {}), [slug(iTitle)]: !state.progress[mSlug]?.[slug(iTitle)] } };
+                    saveJSON(STORAGE_PROGRESS, state.progress);
+                    renderModules(); // Re-render for simplicity
+                }
+                
+                // Edit link
+                if (e.target.classList.contains('edit-link')) {
+                    const iTitle = e.target.dataset.itemTitle;
+                    const iSlug = e.target.dataset.itemSlug;
+                    const current = state.links[mSlug]?.[iSlug] || "";
+                    const newUrl = window.prompt(`Collez le lien Google Drive du PDF pour :\n${mTitle} → ${iTitle}`, current);
+                    if (newUrl !== null) {
+                        state.links = { ...state.links, [mSlug]: { ...(state.links[mSlug] || {}), [iSlug]: newUrl.trim() } };
+                        saveJSON(STORAGE_LINKS, state.links);
+                        renderModules();
+                    }
+                }
+                
+                // Bulk actions
+                const moduleDef = MODULES.find(m => m.title === mTitle);
+                if (e.target.classList.contains('btn-check-all')) {
+                    state.progress[mSlug] = Object.fromEntries(moduleDef.items.map(it => [slug(it), true]));
+                    saveJSON(STORAGE_PROGRESS, state.progress);
+                    renderModules();
+                }
+                if (e.target.classList.contains('btn-uncheck-all')) {
+                    state.progress[mSlug] = Object.fromEntries(moduleDef.items.map(it => [slug(it), false]));
+                    saveJSON(STORAGE_PROGRESS, state.progress);
+                    renderModules();
+                }
+            });
+
+            // ---------- Global Control Events ----------
+            exportBtn.addEventListener('click', () => {
+                const data = { progress: state.progress, links: state.links };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "mathilde_progress.json";
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            importInput.addEventListener('change', (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const rd = new FileReader();
+                rd.onload = () => {
+                    try {
+                        const data = JSON.parse(String(rd.result));
+                        state.progress = data.progress || {};
+                        state.links = data.links || {};
+                        saveJSON(STORAGE_PROGRESS, state.progress);
+                        saveJSON(STORAGE_LINKS, state.links);
+                        render();
+                        alert("Importation réussie ! ✔️");
+                    } catch {
+                        alert("Fichier invalide. ❌");
+                    }
+                };
+                rd.readAsText(f);
+                e.target.value = "";
+            });
+
+            resetBtn.addEventListener('click', () => {
+                if (confirm("Voulez-vous vraiment réinitialiser toute la progression et les liens ? 🤔")) {
+                    state.progress = {};
+                    state.links = {};
+                    saveJSON(STORAGE_PROGRESS, {});
+                    saveJSON(STORAGE_LINKS, {});
+                    render();
+                }
+            });
+
+            // ---------- Paste Helper & Self-tests ----------
+            window.pasteLinksSequential = (arr) => {
+                let idx = 0;
+                const draft = JSON.parse(JSON.stringify(state.links)); // Deep copy
+                MODULES.forEach(m => {
+                    const ms = slug(m.title);
+                    draft[ms] = draft[ms] || {};
+                    m.items.forEach(it => {
+                        if (idx < arr.length) draft[ms][slug(it)] = String(arr[idx++]);
+                    });
+                });
+                state.links = draft;
+                saveJSON(STORAGE_LINKS, state.links);
+                renderModules();
+                console.log(`${idx} liens ont été collés !`);
+            };
+
+            (function runSelfTests() {
+                try {
+                    console.assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug diacritics");
+                    console.assert(slug("  Python   Basics  ") === "python-basics", "slug spaces");
+                    console.assert(WEEKS.length === 12, "12 weeks");
+                    console.assert(new Set(WEEKS.map(w=>w.id)).size === WEEKS.length, "week ids unique");
+                    console.log("✔ Self-tests passed");
+                } catch (e) {
+                    console.error("✖ Self-tests failed", e);
+                }
+            })();
+
+            // ---------- Initial Render ----------
+            render();
+        });
+    </script>
+</body>
+</html>
