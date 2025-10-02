@@ -1,0 +1,454 @@
+import React, { useEffect, useMemo, useState } from "react";
+
+// Interactive roadmap + course checklist with local persistence (localStorage)
+// TailwindCSS styling, no external deps. Designed for Mathilde Martine Paisley.
+
+// Priority color legend
+const PRIORITY = {
+  MASTER: { key: "MASTER", label: "À maîtriser", color: "#0EA5E9" }, // bleu
+  LEARN: { key: "LEARN", label: "À apprendre", color: "#22C55E" },   // vert
+  AWARE: { key: "AWARE", label: "Culture générale", color: "#64748B" } // gris
+};
+
+function slug(s) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    // strip diacritics (portable across browsers)
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export default function MathildePlan() {
+  // --- Weeks ---
+  const weeks = useMemo(
+    () => [
+      { id: 1, label: "S1", month: "Février", title: "Bases Python", color: "#0EA5E9", tasks: [
+        "Variables, conditions, boucles",
+        "Fonctions simples",
+        "Lire/écrire des fichiers"
+      ] },
+      { id: 2, label: "S2", month: "Février", title: "POO & organisation du code", color: "#0EA5E9", tasks: [
+        "Classes & objets (bases)",
+        "Héritage simple",
+        "Modules & bibliothèques",
+        "Mini‑projet : calculatrice"
+      ] },
+      { id: 3, label: "S3", month: "Février", title: "SQL – bases de données", color: "#0EA5E9", tasks: [
+        "SELECT/INSERT/UPDATE",
+        "Modèle simple RH (employés, salaires)",
+        "Jointures & filtres"
+      ] },
+      { id: 4, label: "S4", month: "Février", title: "Mini‑projet Python + SQL", color: "#0EA5E9", tasks: [
+        "Importer CSV → SQL",
+        "Script d’extraction automatisé",
+        "Affichage des résultats"
+      ] },
+      { id: 5, label: "S5", month: "Mars", title: "API REST", color: "#22C55E", tasks: [
+        "HTTP requests (GET/POST)",
+        "JSON & parsing",
+        "Connexion à une API publique"
+      ] },
+      { id: 6, label: "S6", month: "Mars", title: "Pandas & NumPy", color: "#22C55E", tasks: [
+        "Importer/Nettoyer un CSV",
+        "Stats descriptives (moyenne, max, min)",
+        "Prépare jeu RH/paie"
+      ] },
+      { id: 7, label: "S7", month: "Mars", title: "Data‑Viz (Matplotlib/Seaborn)", color: "#22C55E", tasks: [
+        "Histogrammes & courbes",
+        "Ex : salaires par service",
+        "Storytelling visuel"
+      ] },
+      { id: 8, label: "S8", month: "Mars", title: "Mini‑projet API + Viz", color: "#22C55E", tasks: [
+        "Appeler une API",
+        "Nettoyer avec Pandas",
+        "Graphique dynamique"
+      ] },
+      { id: 9, label: "S9", month: "Avril", title: "Flask ou Streamlit", color: "#F97316", tasks: [
+        "Mini‑app web/board",
+        "Page simple déployée",
+        "Architecture propre"
+      ] },
+      { id: 10, label: "S10", month: "Avril", title: "Projet Python – Dashboard RH", color: "#F97316", tasks: [
+        "Base SQL + API + Viz",
+        "KPIs RH (absentéisme, turnover)",
+        "Filtre & navigation"
+      ] },
+      { id: 11, label: "S11", month: "Avril", title: "Améliorations + Doc", color: "#F97316", tasks: [
+        "Filtres & ergonomie",
+        "Doc utilisateur",
+        "Pitch de soutenance"
+      ] },
+      { id: 12, label: "S12", month: "Avril", title: "Validation & Révisions", color: "#F97316", tasks: [
+        "Tests finaux",
+        "Relecture Python/SQL",
+        "Q&A jury"
+      ] }
+    ],
+    []
+  );
+
+  // Single source of truth for active week (fix duplicate declaration error)
+  const [activeWeek, setActiveWeek] = useState(weeks[0]);
+
+  // --- Course list with priorities ---
+  const modules = useMemo(() => ([
+    {
+      title: "Piloter la production de contenus digitaux",
+      priority: PRIORITY.AWARE,
+      items: [
+        "Pourquoi se former / Intro",
+        "Cible & brief créatif",
+        "Gestion & mise en place opérationnelle",
+        "Proposition & application"
+      ]
+    },
+    {
+      title: "HTML / CSS / Bootstrap",
+      priority: PRIORITY.AWARE,
+      items: [
+        "HTML : structure, multimédia, formulaires",
+        "CSS : sélecteurs, box‑model, layout Grid/Flex, responsive",
+        "Bootstrap : grille, composants, Hello world",
+        "Qualité, SASS, SEO, déploiement"
+      ]
+    },
+    {
+      title: "JavaScript (Front)",
+      priority: PRIORITY.AWARE,
+      items: [
+        "Événementiel, DOM, Fetch/AJAX, Promesses",
+        "Objets & classes (bases)",
+        "JSON, Canvas",
+        "jQuery (culture)"
+      ]
+    },
+    {
+      title: "PHP (culture générale)",
+      priority: PRIORITY.AWARE,
+      items: [
+        "Syntaxe, fonctions, tableaux, boucles",
+        "Superglobales, sécurité, fichiers",
+        "POO, erreurs, MVC, ORM PHP"
+      ]
+    },
+    {
+      title: "Bases de données relationnelles (SQL)",
+      priority: PRIORITY.MASTER,
+      items: [
+        "Modèle conceptuel & logique",
+        "Créer/alimenter une BDD, requêtes",
+        "Jointures, fonctions SQL",
+        "Projet : créer & administrer la BDD"
+      ]
+    },
+    {
+      title: "NoSQL / MongoDB",
+      priority: PRIORITY.LEARN,
+      items: [
+        "Concepts NoSQL",
+        "Créer & administrer MongoDB"
+      ]
+    },
+    {
+      title: "Python – fondamentaux",
+      priority: PRIORITY.MASTER,
+      items: [
+        "Interpréteur, environnements",
+        "Variables, conditions, boucles",
+        "Structures de données",
+        "Fonctions, modules, tests unitaires",
+        "POO : classes, héritage, dunders"
+      ]
+    },
+    {
+      title: "Python – Web & APIs",
+      priority: PRIORITY.MASTER,
+      items: [
+        "Fichiers, chaînes, temps",
+        "Requêtes HTTP & API REST",
+        "Flask/Jinja, déploiement",
+        "Django : modèles, vues"
+      ]
+    },
+    {
+      title: "Data & Visualisation (Python)",
+      priority: PRIORITY.MASTER,
+      items: [
+        "NumPy / Pandas (bases → +)",
+        "Matplotlib / Seaborn",
+        "Bokeh / Streamlit",
+        "Présentations impactantes"
+      ]
+    },
+    {
+      title: "React Native (mobile)",
+      priority: PRIORITY.AWARE,
+      items: [
+        "Expo, composants, state/props",
+        "Flexbox, navigation, Redux",
+        "SQLite local, déploiement",
+        "Projet mobile (culture)"
+      ]
+    },
+    {
+      title: "Concevoir & utiliser des API",
+      priority: PRIORITY.MASTER,
+      items: [
+        "Design d’API, sécurisation accès",
+        "OAuth, APIs Google/AWS, paiements",
+        "Utilisation & intégration"
+      ]
+    },
+    {
+      title: "Git / GitHub / GitLab",
+      priority: PRIORITY.LEARN,
+      items: [
+        "CLI, init/commit/push",
+        "Branches & rebase",
+        "Bonnes pratiques, projet GitHub",
+        "Intro GitLab"
+      ]
+    },
+    {
+      title: "Maintenance & documentation",
+      priority: PRIORITY.LEARN,
+      items: [
+        "Doc d’architecture & code",
+        "Améliorations, doc utilisateur",
+        "Dette technique (notions)",
+        "Pentest (culture)"
+      ]
+    }
+  ]), []);
+
+  // localStorage persistence for checkbox states
+  const storageKey = "mathilde-courses-v1";
+  const [progress, setProgress] = useState({});
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setProgress(JSON.parse(raw));
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(progress));
+    } catch {}
+  }, [progress]);
+
+  const toggle = (moduleTitle, item) => {
+    const m = slug(moduleTitle);
+    const k = slug(item);
+    setProgress(prev => ({
+      ...prev,
+      [m]: { ...(prev[m] || {}), [k]: !(prev[m]?.[k]) }
+    }));
+  };
+
+  // Pure helper so we can test it easily
+  const computeProgress = (progressObj, moduleTitle, items) => {
+    const m = slug(moduleTitle);
+    const done = items.filter(it => progressObj[m]?.[slug(it)]).length;
+    return Math.round((done / items.length) * 100);
+  };
+
+  const computeModuleProgress = (moduleTitle, items) =>
+    computeProgress(progress, moduleTitle, items);
+
+  // ---- Lightweight self-tests (run once in dev) ----
+  useEffect(() => {
+    const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
+    try {
+      // slug tests
+      assert(slug("Élévation des coüts!") === "elevation-des-couts", "slug should strip diacritics & punctuation");
+      assert(slug(" Python  Basics  ") === "python-basics", "slug should collapse spaces");
+      // progress tests
+      const items = ["A", "B", "C"];
+      const p0 = {}; // nothing done
+      assert(computeProgress(p0, "Test", items) === 0, "progress 0% expected");
+      const p1 = { [slug("Test")]: { [slug("A")]: true, [slug("B")]: true, [slug("C")]: true } };
+      assert(computeProgress(p1, "Test", items) === 100, "progress 100% expected");
+      // weeks tests
+      const ids = weeks.map(w => w.id);
+      const uniq = new Set(ids);
+      assert(ids.length === 12, "there should be 12 weeks");
+      assert(uniq.size === ids.length, "week ids must be unique");
+      // state naming test (prevent duplicate declaration)
+      // NOTE: at runtime we can't introspect declarations; this comment documents the fix:
+      // We keep a single declaration: const [activeWeek, setActiveWeek] = useState(weeks[0]);
+      console.log("✔ Self-tests passed");
+    } catch (e) {
+      console.error("✖ Self-tests failed:", e);
+    }
+  }, [weeks]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-800">
+      {/* Header */}
+      <header className="mx-auto max-w-6xl px-6 pt-10 pb-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+              Plan Python & Data – <span className="text-sky-600">Mathilde Martine Paisley</span>
+            </h1>
+            <p className="mt-2 text-slate-600 max-w-2xl">
+              Rôle ciblé : <span className="font-semibold">Cheffe de projet / Direction de projet</span> (SIRH, Data, Digital). Objectif :
+              <span className="font-semibold"> maîtrise des mécanismes</span> (Python, APIs, Data‑Viz, SQL) pour piloter avec crédibilité — sans devenir développeuse.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-2xl bg-white/70 backdrop-blur border border-slate-200 p-4 shadow-sm">
+            <p className="text-xs uppercase tracking-wider text-slate-500">Cadence proposée</p>
+            <p className="text-sm font-semibold text-slate-700">2 soirs × 1h + 1 matinée week‑end × 2h</p>
+          </div>
+        </div>
+      </header>
+
+      {/* Timeline */}
+      <section className="mx-auto max-w-6xl px-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold">Frise chronologique (12 semaines)</h2>
+            <div className="flex items-center gap-3 text-xs">
+              <LegendDot color="#0EA5E9" label="Février" />
+              <LegendDot color="#22C55E" label="Mars" />
+              <LegendDot color="#F97316" label="Avril" />
+            </div>
+          </div>
+          <Timeline weeks={weeks} onPick={setActiveWeek} />
+          <ActiveWeekCard week={activeWeek} />
+        </div>
+      </section>
+
+      {/* Course checklist with priorities */}
+      <section className="mx-auto max-w-6xl px-6 mt-8 pb-16">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="text-xl font-bold">Suivi des cours – check‑list (local)</h2>
+            <div className="flex items-center gap-3 text-xs text-slate-600">
+              <LegendDot color={PRIORITY.MASTER.color} label={PRIORITY.MASTER.label} />
+              <LegendDot color={PRIORITY.LEARN.color} label={PRIORITY.LEARN.label} />
+              <LegendDot color={PRIORITY.AWARE.color} label={PRIORITY.AWARE.label} />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {modules.map((m) => (
+              <div key={m.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-slate-800">{m.title}</h3>
+                  <span className="inline-flex items-center gap-2 text-xs">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: m.priority.color }}></span>
+                    <span className="text-slate-500">{m.priority.label}</span>
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-3 h-2 w-full rounded-full bg-white border border-slate-200 overflow-hidden">
+                  <div
+                    className="h-full"
+                    style={{
+                      width: `${computeModuleProgress(m.title, m.items)}%`,
+                      background: m.priority.color
+                    }}
+                  />
+                </div>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {m.items.map((it) => {
+                    const mKey = slug(m.title);
+                    const iKey = slug(it);
+                    const checked = !!progress[mKey]?.[iKey];
+                    return (
+                      <li key={iKey} className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 rounded border-slate-300"
+                          checked={checked}
+                          onChange={() => toggle(m.title, it)}
+                          aria-label={`Valider ${it}`}
+                        />
+                        <span className={`select-text ${checked ? "line-through text-slate-400" : "text-slate-700"}`}>
+                          {it}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="mx-auto max-w-6xl px-6 pb-12">
+        <div className="text-center text-xs text-slate-500">
+          Conçu pour <span className="font-semibold">Mathilde Martine Paisley</span> · Suivi sauvegardé en local (navigateurs avec localStorage)
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// --- UI Partials ---
+function LegendDot({ color, label }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-slate-500">{label}</span>
+    </span>
+  );
+}
+
+function Timeline({ weeks, onPick }) {
+  return (
+    <div className="relative overflow-x-auto">
+      <div className="min-w-[900px]">
+        <div className="flex items-center gap-6">
+          {weeks.map((w, idx) => (
+            <button
+              key={w.id}
+              onClick={() => onPick(w)}
+              className={`group relative flex flex-col items-center focus:outline-none`}
+              aria-label={`${w.label} – ${w.title}`}
+            >
+              {idx > 0 && (
+                <div className="absolute top-4 -left-[calc(3rem+12px)] h-[2px] w-[3.1rem] bg-slate-200" />
+              )}
+              <span
+                className="grid place-items-center h-8 w-8 rounded-full shadow-sm"
+                style={{ backgroundColor: w.color }}
+              >
+                <span className="text-[11px] font-bold text-white">{w.label}</span>
+              </span>
+              <span className="mt-2 text-[11px] font-semibold text-slate-700">{w.month}</span>
+              <span className="mt-1 max-w-[120px] text-center text-[11px] text-slate-500">{w.title}</span>
+              <span className={`absolute inset-0 rounded-xl ring-2 ring-transparent group-hover:ring-slate-300 transition`} />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActiveWeekCard({ week }) {
+  return (
+    <div className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-slate-500">Semaine active</p>
+          <h3 className="text-lg font-bold text-slate-800">{week.label} – {week.title}</h3>
+          <p className="text-sm text-slate-600">Mois : {week.month}</p>
+        </div>
+        <div className="shrink-0 rounded-xl bg-white border border-slate-200 p-4">
+          <p className="text-xs uppercase tracking-wider text-slate-500">Focus tâches</p>
+          <ul className="mt-2 space-y-1 text-sm text-slate-700 list-disc pl-5">
+            {week.tasks.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
